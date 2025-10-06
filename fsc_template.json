@@ -1,0 +1,433 @@
+{
+  "plugin_json": {
+    "name": "[Kineton] ISO 26262 FSC Developer",
+    "version": "0.0.1",
+    "description": "A plugin that enables AI agents to develop a Functional Safety Concept work product from HARA outputs, compliant with ISO 26262-4:2018",
+    "author_name": "Tonino De Nigris",
+    "author_url": "https://github.com/tondeni",
+    "plugin_url": "https://github.com/tondeni/AI_Agent-FSC_Developer",
+    "tags": "ISO26262, FuSa, Functional Safety, FSC",
+    "thumb": "https://github.com/tondeni/AI_Agent-FSC_Developer/blob/master/assets/FuSa_AI_Agent_Plugin_logo.png?raw=true"
+  },
+
+  "fsc_structure_json": {
+    "document_structure": {
+      "1_introduction": {
+        "title": "1. Introduction",
+        "subsections": {
+          "1_1_purpose": {
+            "title": "1.1 Purpose and Scope",
+            "prompt": "State that this FSC document defines the functional safety requirements, their allocation, and technical realization strategy for achieving the safety goals identified in the HARA.",
+            "iso_clause": "ISO 26262-4:2018, Clause 7.5"
+          },
+          "1_2_references": {
+            "title": "1.2 Referenced Documents",
+            "prompt": "List: Item Definition (ISO 26262-3, Clause 5), HARA (ISO 26262-3, Clause 6), relevant ISO 26262 parts, and any project-specific standards.",
+            "iso_clause": "ISO 26262-8:2018, Clause 6.4.2"
+          },
+          "1_3_terms": {
+            "title": "1.3 Terms, Definitions, and Abbreviations",
+            "prompt": "Define: FSR (Functional Safety Requirement), TSR (Technical Safety Requirement), FTTI (Fault-Tolerant Time Interval), and project-specific terms."
+          }
+        }
+      },
+      "2_safety_goals": {
+        "title": "2. Safety Goals Overview",
+        "subsections": {
+          "2_1_summary": {
+            "title": "2.1 Safety Goals Summary",
+            "prompt": "Present a table with: SG-ID, Safety Goal Statement, ASIL, Safe State, FTTI. Include total count per ASIL level.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.1"
+          },
+          "2_2_rationale": {
+            "title": "2.2 Safety Goal Rationale",
+            "prompt": "For each safety goal, briefly explain the hazardous scenario it addresses and why the specified safe state is appropriate."
+          }
+        }
+      },
+      "3_functional_safety_requirements": {
+        "title": "3. Functional Safety Requirements (FSRs)",
+        "subsections": {
+          "3_1_detection": {
+            "title": "3.1 Detection Requirements",
+            "prompt": "List all FSRs for fault detection. Include: FSR-ID, Requirement, ASIL, Parent Safety Goal, Verification Method.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.2"
+          },
+          "3_2_reaction": {
+            "title": "3.2 Reaction Requirements",
+            "prompt": "List all FSRs for achieving safe state. Include timing constraints and safe state specifications.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.2"
+          },
+          "3_3_indication": {
+            "title": "3.3 Indication Requirements",
+            "prompt": "List all FSRs for fault communication. Specify notification targets (driver, VCU, etc.) and timing.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.2"
+          }
+        }
+      },
+      "4_allocation": {
+        "title": "4. FSR Allocation",
+        "subsections": {
+          "4_1_matrix": {
+            "title": "4.1 Allocation Matrix",
+            "prompt": "Create table: FSR-ID | Allocated Component | Interface Type | Rationale. Show allocation to HW, SW, and external systems.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.4"
+          },
+          "4_2_architecture": {
+            "title": "4.2 Functional Architecture",
+            "prompt": "Describe high-level architecture of safety functions, showing data flows and component interactions.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.4"
+          }
+        }
+      },
+      "5_technical_requirements": {
+        "title": "5. Technical Safety Requirements (TSRs)",
+        "subsections": {
+          "5_1_hardware": {
+            "title": "5.1 Hardware TSRs",
+            "prompt": "List TSRs for hardware components. Include: voltage ranges, timing constraints, diagnostic coverage targets.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.5"
+          },
+          "5_2_software": {
+            "title": "5.2 Software TSRs",
+            "prompt": "List TSRs for software modules. Include: algorithms, data validation rules, error handling.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.5"
+          },
+          "5_3_environmental": {
+            "title": "5.3 Environmental Conditions",
+            "prompt": "Specify operating conditions: temperature ranges, voltage limits, EMC requirements.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.5"
+          }
+        }
+      },
+      "6_safety_mechanisms": {
+        "title": "6. Safety Mechanisms",
+        "subsections": {
+          "6_1_diagnostic": {
+            "title": "6.1 Diagnostic Mechanisms",
+            "prompt": "List: plausibility checks, checksums, BIST. Link to FSRs and specify diagnostic coverage.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.5.4"
+          },
+          "6_2_redundancy": {
+            "title": "6.2 Redundancy and Diversity",
+            "prompt": "Describe: dual sensors, voting logic, lockstep cores. Specify independence measures.",
+            "iso_clause": "ISO 26262-5:2018, Clause 6.4.8"
+          },
+          "6_3_safe_state": {
+            "title": "6.3 Safe State Management",
+            "prompt": "Define safe state transition logic, shutdown sequences, and degraded operation modes.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.6"
+          }
+        }
+      },
+      "7_asil_decomposition": {
+        "title": "7. ASIL Decomposition (if applicable)",
+        "prompt": "Document any ASIL decompositions. For each: original requirement, decomposed requirements, independence justification.",
+        "iso_clause": "ISO 26262-9:2018, Clause 5"
+      },
+      "8_verification_strategy": {
+        "title": "8. Verification Strategy",
+        "subsections": {
+          "8_1_methods": {
+            "title": "8.1 Verification Methods",
+            "prompt": "List verification methods per requirement: reviews, testing, simulation, analysis.",
+            "iso_clause": "ISO 26262-4:2018, Clause 6.4.9"
+          },
+          "8_2_coverage": {
+            "title": "8.2 Coverage Targets",
+            "prompt": "Specify test coverage targets per ASIL (e.g., ASIL D: >99% diagnostic coverage).",
+            "iso_clause": "ISO 26262-5:2018, Clause 8"
+          }
+        }
+      },
+      "9_traceability": {
+        "title": "9. Traceability",
+        "prompt": "Include complete traceability matrix: Safety Goal → FSR → TSR → Safety Mechanism → Verification Method.",
+        "iso_clause": "ISO 26262-8:2018, Clause 6.4.3"
+      },
+      "10_approvals": {
+        "title": "10. Approvals",
+        "prompt": "Table with: Role (Safety Engineer, System Architect, Project Manager) | Name | Signature | Date. Leave as placeholders."
+      }
+    }
+  },
+
+  "safety_mechanisms_catalog_json": {
+    "diagnostic_mechanisms": [
+      {
+        "id": "SM_DIAG_001",
+        "name": "Plausibility Check",
+        "description": "Compare sensor reading against expected range based on physical constraints",
+        "applicable_to": ["voltage_sensor", "current_sensor", "temperature_sensor", "speed_sensor"],
+        "diagnostic_coverage": "90-95%",
+        "asil_suitability": ["A", "B", "C", "D"],
+        "implementation_effort": "Low",
+        "example": "Check battery voltage is between 200V-450V; flag fault if outside range"
+      },
+      {
+        "id": "SM_DIAG_002",
+        "name": "CRC/Checksum Validation",
+        "description": "Verify data integrity using Cyclic Redundancy Check or checksum",
+        "applicable_to": ["communication", "memory", "data_storage"],
+        "diagnostic_coverage": "99%",
+        "asil_suitability": ["B", "C", "D"],
+        "implementation_effort": "Low",
+        "example": "Append CRC-16 to CAN messages; receiver validates before processing"
+      },
+      {
+        "id": "SM_DIAG_003",
+        "name": "Alive Counter/Sequence Number",
+        "description": "Monitor message sequence to detect loss, duplication, or order corruption",
+        "applicable_to": ["communication"],
+        "diagnostic_coverage": "95%",
+        "asil_suitability": ["B", "C", "D"],
+        "implementation_effort": "Low",
+        "example": "Increment counter 0-15 in each message; receiver checks for gaps"
+      },
+      {
+        "id": "SM_DIAG_004",
+        "name": "Timestamp Validation",
+        "description": "Check message freshness to detect delayed or replayed data",
+        "applicable_to": ["communication", "sensor_data"],
+        "diagnostic_coverage": "85%",
+        "asil_suitability": ["A", "B", "C"],
+        "implementation_effort": "Medium",
+        "example": "Reject data older than 50ms in safety-critical control loop"
+      },
+      {
+        "id": "SM_DIAG_005",
+        "name": "Gradient Check",
+        "description": "Monitor rate of change to detect sensor drift or sudden jumps",
+        "applicable_to": ["analog_sensors"],
+        "diagnostic_coverage": "80-90%",
+        "asil_suitability": ["A", "B", "C"],
+        "implementation_effort": "Medium",
+        "example": "Battery temperature cannot change >5°C per second; flag if violated"
+      },
+      {
+        "id": "SM_DIAG_006",
+        "name": "Cross-Check Between Redundant Sensors",
+        "description": "Compare readings from multiple sensors measuring same physical quantity",
+        "applicable_to": ["redundant_sensors"],
+        "diagnostic_coverage": "95-99%",
+        "asil_suitability": ["B", "C", "D"],
+        "implementation_effort": "High",
+        "example": "Compare two voltage sensors; flag if deviation >2%"
+      },
+      {
+        "id": "SM_DIAG_007",
+        "name": "Built-In Self-Test (BIST)",
+        "description": "Execute automated diagnostic routines at startup or periodically",
+        "applicable_to": ["microcontroller", "memory", "peripherals"],
+        "diagnostic_coverage": "70-90%",
+        "asil_suitability": ["A", "B", "C", "D"],
+        "implementation_effort": "High",
+        "example": "Test RAM by writing/reading known patterns at power-on"
+      }
+    ],
+
+    "redundancy_mechanisms": [
+      {
+        "id": "SM_RED_001",
+        "name": "Dual Sensor Redundancy",
+        "description": "Use two independent sensors for critical measurements with voting logic",
+        "applicable_to": ["voltage_sensing", "current_sensing", "position_sensing"],
+        "diagnostic_coverage": "95-99%",
+        "asil_suitability": ["C", "D"],
+        "implementation_effort": "High",
+        "independence_requirements": "Separate power supply, different sensing principle preferred"
+      },
+      {
+        "id": "SM_RED_002",
+        "name": "Triple Modular Redundancy (TMR)",
+        "description": "Use three independent channels with 2-out-of-3 voting",
+        "applicable_to": ["critical_computation", "actuation"],
+        "diagnostic_coverage": "99%+",
+        "asil_suitability": ["D"],
+        "implementation_effort": "Very High",
+        "independence_requirements": "Separate HW, power, and SW implementations"
+      },
+      {
+        "id": "SM_RED_003",
+        "name": "Lockstep CPUs",
+        "description": "Two CPUs execute identical instructions in parallel; outputs compared",
+        "applicable_to": ["safety_critical_computation"],
+        "diagnostic_coverage": "99%+",
+        "asil_suitability": ["D"],
+        "implementation_effort": "High",
+        "independence_requirements": "Separate CPU cores with independent clock trees"
+      },
+      {
+        "id": "SM_RED_004",
+        "name": "Redundant Communication Paths",
+        "description": "Dual CAN buses or Ethernet channels for critical messages",
+        "applicable_to": ["communication"],
+        "diagnostic_coverage": "95%",
+        "asil_suitability": ["C", "D"],
+        "implementation_effort": "Medium",
+        "independence_requirements": "Separate physical channels, different routing"
+      }
+    ],
+
+    "safe_state_mechanisms": [
+      {
+        "id": "SM_SAFE_001",
+        "name": "Controlled Shutdown Sequence",
+        "description": "Execute orderly shutdown to reach safe state without abrupt transitions",
+        "applicable_to": ["power_management", "system_control"],
+        "asil_suitability": ["A", "B", "C", "D"],
+        "timing_constraint": "Must complete within FTTI",
+        "example": "Open contactors in sequence: precharge → main positive → main negative"
+      },
+      {
+        "id": "SM_SAFE_002",
+        "name": "Degraded Mode Operation",
+        "description": "Continue operation with reduced performance when non-critical fault detected",
+        "applicable_to": ["system_control"],
+        "asil_suitability": ["A", "B"],
+        "example": "Limit charging power to 50% if one temperature sensor fails"
+      },
+      {
+        "id": "SM_SAFE_003",
+        "name": "Fail-Silent Behavior",
+        "description": "Stop outputting data/signals when fault detected to prevent propagation",
+        "applicable_to": ["communication", "control_outputs"],
+        "asil_suitability": ["B", "C", "D"],
+        "timing_constraint": "Must silence within 10ms of fault detection",
+        "example": "Stop transmitting CAN messages if internal fault detected"
+      },
+      {
+        "id": "SM_SAFE_004",
+        "name": "Hardware Interlock",
+        "description": "Physical hardware enforces safe state regardless of software state",
+        "applicable_to": ["actuators", "power_switching"],
+        "asil_suitability": ["C", "D"],
+        "example": "Contactor mechanically opens when power is removed"
+      }
+    ],
+
+    "supervision_mechanisms": [
+      {
+        "id": "SM_SUP_001",
+        "name": "Independent Watchdog Timer",
+        "description": "External watchdog resets system if not refreshed within timeout period",
+        "applicable_to": ["microcontroller"],
+        "diagnostic_coverage": "95%",
+        "asil_suitability": ["B", "C", "D"],
+        "implementation_effort": "Low",
+        "example": "External watchdog IC requires refresh every 100ms; resets MCU if missed"
+      },
+      {
+        "id": "SM_SUP_002",
+        "name": "Program Flow Monitoring",
+        "description": "Verify software executes expected sequence of operations",
+        "applicable_to": ["software"],
+        "diagnostic_coverage": "80-90%",
+        "asil_suitability": ["B", "C"],
+        "implementation_effort": "Medium",
+        "example": "Checkpoints in code increment counter; verify correct sequence at end"
+      },
+      {
+        "id": "SM_SUP_003",
+        "name": "Execution Time Monitoring",
+        "description": "Monitor task execution time to detect infinite loops or stuck processes",
+        "applicable_to": ["software"],
+        "diagnostic_coverage": "85%",
+        "asil_suitability": ["A", "B", "C"],
+        "implementation_effort": "Low",
+        "example": "Safety task must complete within 10ms; flag fault if exceeded"
+      },
+      {
+        "id": "SM_SUP_004",
+        "name": "Heartbeat Monitoring",
+        "description": "Periodic signal exchange between components to detect communication loss",
+        "applicable_to": ["communication", "distributed_systems"],
+        "diagnostic_coverage": "90%",
+        "asil_suitability": ["B", "C"],
+        "implementation_effort": "Low",
+        "example": "BMS sends heartbeat to VCU every 100ms; VCU flags fault if 3 missed"
+      }
+    ]
+  },
+
+  "asil_decomposition_rules_json": {
+    "valid_decompositions": {
+      "ASIL_D": [
+        {
+          "option": "D(D)",
+          "description": "Single ASIL D requirement (no decomposition)",
+          "requirements": "Full ASIL D rigor on single element"
+        },
+        {
+          "option": "B(D) + B(D)",
+          "description": "Two ASIL B requirements with ASIL D independence",
+          "requirements": "Freedom from interference, independent failures, separate channels"
+        },
+        {
+          "option": "C(D) + A(D)",
+          "description": "ASIL C + ASIL A with ASIL D independence",
+          "requirements": "Asymmetric decomposition, one element more robust"
+        }
+      ],
+      "ASIL_C": [
+        {
+          "option": "C(D)",
+          "description": "Single ASIL C requirement",
+          "requirements": "Full ASIL C rigor"
+        },
+        {
+          "option": "B(D) + A(D)",
+          "description": "ASIL B + ASIL A with independence",
+          "requirements": "Freedom from interference, independent channels"
+        }
+      ],
+      "ASIL_B": [
+        {
+          "option": "B(D)",
+          "description": "Single ASIL B requirement",
+          "requirements": "Full ASIL B rigor"
+        },
+        {
+          "option": "A(D) + A(D)",
+          "description": "Two ASIL A requirements with independence",
+          "requirements": "Freedom from interference, independent implementations"
+        }
+      ],
+      "ASIL_A": [
+        {
+          "option": "A(D)",
+          "description": "Single ASIL A requirement",
+          "requirements": "Full ASIL A rigor (no decomposition benefit)"
+        }
+      ]
+    },
+
+    "independence_criteria": [
+      "Separate hardware components or channels",
+      "Independent power supplies (or demonstrated interference immunity)",
+      "Separate software modules with memory protection",
+      "Independent development and verification (for SW)",
+      "Different failure modes or mechanisms",
+      "Freedom from cascading failures",
+      "Spatial separation (physical distance) if relevant",
+      "Temporal independence (different execution times)"
+    ],
+
+    "when_to_decompose": {
+      "beneficial": [
+        "Requirement is highly complex and difficult to achieve at full ASIL",
+        "Significant cost or schedule savings from decomposition",
+        "Technology limitations make full ASIL difficult",
+        "Decomposition enables use of existing ASIL-rated components",
+        "Asymmetric architecture where one path is already higher ASIL"
+      ],
+      "not_beneficial": [
+        "Requirement is already simple and achievable",
+        "Independence overhead exceeds complexity savings",
+        "Verification burden increases significantly",
+        "Project timeline doesn't allow for decomposition analysis",
+        "System architecture doesn't support independent channels"
+      ]
+    }
+  }
+}

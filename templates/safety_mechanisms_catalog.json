@@ -1,0 +1,356 @@
+{
+  "catalog_name": "ASIL Decomposition Rules",
+  "version": "1.0",
+  "standard": "ISO 26262-9:2018, Clause 5",
+  "scope": "Rules and guidance for ASIL decomposition in Functional Safety Concept",
+
+  "overview": {
+    "purpose": "ASIL decomposition allows splitting a high-ASIL requirement into multiple lower-ASIL requirements with sufficient independence, potentially reducing development complexity while maintaining safety integrity.",
+    "key_principle": "The decomposed requirements must be sufficiently independent such that simultaneous violation is sufficiently unlikely.",
+    "verification": "Independence must be verified through dependent failure analysis per ISO 26262-9:2018, Clause 7.",
+    "notation": "ASIL X(Y) means: ASIL X with independence corresponding to ASIL Y. Example: ASIL B(D) = ASIL B integrity with ASIL D independence."
+  },
+
+  "valid_decompositions": {
+    "ASIL_D": [
+      {
+        "option": "D(D)",
+        "description": "Single ASIL D requirement (no decomposition)",
+        "requirements": "Full ASIL D development rigor on single element",
+        "when_to_use": "Requirement is achievable at ASIL D, no benefit from decomposition"
+      },
+      {
+        "option": "B(D) + B(D)",
+        "description": "Two ASIL B requirements with ASIL D independence",
+        "requirements": [
+          "Each requirement developed to ASIL B",
+          "ASIL D level independence between requirements",
+          "Freedom from interference must be ensured",
+          "Independent failure modes",
+          "Separate implementation channels"
+        ],
+        "when_to_use": "ASIL D development too complex; two independent ASIL B paths feasible",
+        "example": "Dual independent voltage sensing paths, each ASIL B, with ASIL D independence"
+      },
+      {
+        "option": "C(D) + A(D)",
+        "description": "ASIL C + ASIL A with ASIL D independence",
+        "requirements": [
+          "Primary requirement developed to ASIL C",
+          "Secondary requirement developed to ASIL A",
+          "ASIL D level independence between requirements",
+          "Asymmetric decomposition - one path carries more integrity"
+        ],
+        "when_to_use": "One path can feasibly achieve higher integrity than the other",
+        "example": "Primary detection (ASIL C) + Secondary plausibility check (ASIL A)"
+      }
+    ],
+
+    "ASIL_C": [
+      {
+        "option": "C(D)",
+        "description": "Single ASIL C requirement (no decomposition)",
+        "requirements": "Full ASIL C development rigor on single element",
+        "when_to_use": "Requirement is achievable at ASIL C"
+      },
+      {
+        "option": "B(D) + A(D)",
+        "description": "ASIL B + ASIL A with ASIL D independence",
+        "requirements": [
+          "Primary requirement developed to ASIL B",
+          "Secondary requirement developed to ASIL A",
+          "ASIL D level independence",
+          "Freedom from interference"
+        ],
+        "when_to_use": "ASIL C development complex; independent ASIL B + A paths feasible",
+        "example": "Hardware detection (ASIL B) + Software plausibility (ASIL A)"
+      }
+    ],
+
+    "ASIL_B": [
+      {
+        "option": "B(D)",
+        "description": "Single ASIL B requirement (no decomposition)",
+        "requirements": "Full ASIL B development rigor on single element",
+        "when_to_use": "Requirement is achievable at ASIL B"
+      },
+      {
+        "option": "A(D) + A(D)",
+        "description": "Two ASIL A requirements with ASIL D independence",
+        "requirements": [
+          "Each requirement developed to ASIL A",
+          "ASIL D level independence",
+          "Separate implementation channels",
+          "Freedom from interference"
+        ],
+        "when_to_use": "Two independent ASIL A paths easier than single ASIL B",
+        "example": "Dual independent ASIL A monitoring channels"
+      }
+    ],
+
+    "ASIL_A": [
+      {
+        "option": "A(D)",
+        "description": "Single ASIL A requirement (no decomposition)",
+        "requirements": "Full ASIL A development rigor",
+        "when_to_use": "ASIL A is lowest ASIL; decomposition provides no benefit"
+      }
+    ]
+  },
+
+  "independence_criteria": {
+    "overview": "Requirements must demonstrate sufficient independence to justify decomposition.",
+    "required_analyses": [
+      "Dependent Failure Analysis (ISO 26262-9:2018, Clause 7)",
+      "Freedom from Interference Analysis (ISO 26262-9:2018, Clause 6)",
+      "Common Cause Failure Analysis"
+    ],
+    
+    "independence_measures": [
+      {
+        "category": "Hardware Independence",
+        "measures": [
+          "Separate hardware components or channels",
+          "Independent power supplies (or demonstrated immunity to supply faults)",
+          "Separate signal paths",
+          "Physical separation (when relevant for external interference)",
+          "Different hardware technologies (diverse redundancy)"
+        ]
+      },
+      {
+        "category": "Software Independence",
+        "measures": [
+          "Separate software modules",
+          "Memory protection between modules",
+          "Independent development (different teams/tools if ASIL D)",
+          "Separate execution contexts (tasks, partitions)",
+          "Temporal independence (different execution timing)"
+        ]
+      },
+      {
+        "category": "Failure Mode Independence",
+        "measures": [
+          "Different failure modes or mechanisms",
+          "No common cause failures",
+          "No cascading failures between decomposed requirements",
+          "Independent detection methods"
+        ]
+      },
+      {
+        "category": "Development Independence",
+        "measures": [
+          "Independent verification (different people/methods)",
+          "For ASIL D decomposition: consider independent development teams",
+          "Independent reviews",
+          "Separate configuration management (for high decomposition levels)"
+        ]
+      }
+    ]
+  },
+
+  "when_to_decompose": {
+    "beneficial_scenarios": [
+      {
+        "scenario": "High complexity at full ASIL",
+        "description": "Requirement is highly complex and difficult to achieve at full ASIL",
+        "example": "Complex algorithm required at ASIL D may be split into simpler ASIL B algorithms with independent verification"
+      },
+      {
+        "scenario": "Significant cost savings",
+        "description": "Decomposition enables use of lower-cost components or less rigorous processes",
+        "example": "Using two ASIL B certified components instead of one ASIL D component"
+      },
+      {
+        "scenario": "Technology limitations",
+        "description": "Available technology cannot achieve full ASIL integrity",
+        "example": "Sensor technology limited to ASIL B; use dual sensors with independence"
+      },
+      {
+        "scenario": "Reuse of existing components",
+        "description": "Enables reuse of components certified at lower ASIL",
+        "example": "Existing ASIL B software module can be reused with additional ASIL B monitoring"
+      },
+      {
+        "scenario": "Schedule benefits",
+        "description": "Parallel development of independent ASIL B elements faster than serial ASIL D",
+        "example": "Two teams develop ASIL B(D) paths in parallel"
+      },
+      {
+        "scenario": "Asymmetric architecture",
+        "description": "System naturally has primary and secondary paths of different criticality",
+        "example": "Primary sensor (ASIL C) + backup sensor (ASIL A)"
+      }
+    ],
+
+    "not_beneficial_scenarios": [
+      {
+        "scenario": "Requirement already simple",
+        "description": "Requirement is already simple and achievable at full ASIL",
+        "rationale": "Decomposition adds complexity without benefit"
+      },
+      {
+        "scenario": "Independence overhead exceeds savings",
+        "description": "Cost of ensuring and verifying independence greater than developing at full ASIL",
+        "rationale": "Physical separation, diverse components, additional verification may cost more"
+      },
+      {
+        "scenario": "Architecture doesn't support independence",
+        "description": "System architecture inherently creates dependencies between elements",
+        "rationale": "Cannot achieve required independence; decomposition not valid"
+      },
+      {
+        "scenario": "Increased verification burden",
+        "description": "Verification of independence and two separate requirements exceeds single requirement verification",
+        "rationale": "Dependent failure analysis and freedom from interference verification may be extensive"
+      },
+      {
+        "scenario": "Timeline doesn't allow decomposition analysis",
+        "description": "Project schedule doesn't permit time for decomposition analysis and independence verification",
+        "rationale": "Decomposition analysis, DFA, FFI analysis require significant effort"
+      }
+    ]
+  },
+
+  "decomposition_process": {
+    "step_1": {
+      "name": "Identify Decomposition Candidate",
+      "description": "Identify FSR that is difficult at full ASIL and may benefit from decomposition",
+      "outputs": ["Candidate FSR", "Current ASIL", "Complexity rationale"]
+    },
+    "step_2": {
+      "name": "Select Decomposition Strategy",
+      "description": "Choose valid decomposition from valid_decompositions based on feasibility",
+      "outputs": ["Decomposition option (e.g., B(D) + B(D))", "Rationale for selection"]
+    },
+    "step_3": {
+      "name": "Define Decomposed Requirements",
+      "description": "Split original FSR into two or more independent requirements",
+      "outputs": [
+        "FSR-XXX-DEC1: [Description] (ASIL X(D))",
+        "FSR-XXX-DEC2: [Description] (ASIL Y(D))",
+        "Traceability to original FSR"
+      ]
+    },
+    "step_4": {
+      "name": "Establish Independence Measures",
+      "description": "Define how independence will be achieved per independence_criteria",
+      "outputs": [
+        "Hardware independence measures",
+        "Software independence measures",
+        "Failure mode independence",
+        "Development independence plan"
+      ]
+    },
+    "step_5": {
+      "name": "Verify Independence",
+      "description": "Conduct analyses to verify independence is achieved",
+      "required_analyses": [
+        "Dependent Failure Analysis (ISO 26262-9, Clause 7)",
+        "Freedom from Interference (ISO 26262-9, Clause 6)",
+        "Common Cause Analysis"
+      ],
+      "outputs": [
+        "DFA report",
+        "FFI analysis report",
+        "Independence justification"
+      ]
+    },
+    "step_6": {
+      "name": "Document Decomposition",
+      "description": "Document decomposition in FSC with complete rationale",
+      "outputs": [
+        "Original FSR and ASIL",
+        "Decomposed FSRs and ASILs",
+        "Decomposition rationale",
+        "Independence justification",
+        "Verification of independence"
+      ]
+    }
+  },
+
+  "common_pitfalls": [
+    {
+      "pitfall": "Assuming independence without verification",
+      "consequence": "Decomposition invalid; safety integrity not maintained",
+      "mitigation": "Always perform DFA and FFI analysis"
+    },
+    {
+      "pitfall": "Shared power supply without proper analysis",
+      "consequence": "Common cause failure violates independence",
+      "mitigation": "Use separate power or prove immunity to power faults"
+    },
+    {
+      "pitfall": "Software sharing resources without protection",
+      "consequence": "Memory corruption or timing interference violates independence",
+      "mitigation": "Implement memory protection and temporal isolation"
+    },
+    {
+      "pitfall": "Common mode failures not identified",
+      "consequence": "Both channels fail simultaneously",
+      "mitigation": "Thorough common cause analysis; consider diverse redundancy"
+    },
+    {
+      "pitfall": "Cascading failures",
+      "consequence": "Failure in one channel causes failure in other channel",
+      "mitigation": "Ensure fault isolation between channels"
+    },
+    {
+      "pitfall": "Decomposition applied too late",
+      "consequence": "Architecture already committed; cannot achieve independence",
+      "mitigation": "Consider decomposition early in FSC phase"
+    }
+  ],
+
+  "documentation_requirements": {
+    "fsc_section": "ASIL Decomposition",
+    "required_content": [
+      "List of all decomposed requirements",
+      "For each decomposition:",
+      [
+        "Original FSR-ID and ASIL",
+        "Decomposed FSR-IDs and ASILs with (D) notation",
+        "Decomposition rationale (why beneficial)",
+        "Independence measures (how independence achieved)",
+        "Independence verification (DFA, FFI results)",
+        "Traceability (original → decomposed requirements)"
+      ]
+    ],
+    "example_entry": {
+      "original_requirement": "FSR-003-REACT-1: Achieve safe state within 100ms (ASIL D)",
+      "decomposition": "ASIL D → B(D) + B(D)",
+      "decomposed_requirements": [
+        "FSR-003-REACT-1A: Primary safe state path via contactor opening (ASIL B(D))",
+        "FSR-003-REACT-1B: Secondary safe state path via relay opening (ASIL B(D))"
+      ],
+      "independence_measures": [
+        "Hardware: Separate contactor and relay with independent drivers",
+        "Power: Independent 12V supplies with fault isolation",
+        "Control: Separate software modules with memory protection",
+        "Failure Modes: Contactor weld does not affect relay; relay weld does not affect contactor"
+      ],
+      "independence_verification": [
+        "DFA performed: No common cause failures identified",
+        "FFI analysis: Memory protection verified, temporal independence verified",
+        "Test results: Independent operation demonstrated"
+      ],
+      "rationale": "ASIL D contactor control complex; dual ASIL B paths with diverse actuation reduces complexity while maintaining safety"
+    }
+  },
+
+  "references": {
+    "primary": "ISO 26262-9:2018, Clause 5 - ASIL decomposition",
+    "related": [
+      "ISO 26262-9:2018, Clause 6 - Criteria for coexistence of elements",
+      "ISO 26262-9:2018, Clause 7 - Analysis of dependent failures",
+      "ISO 26262-3:2018, Clause 7.4.2.8 - Allocation of FSRs"
+    ]
+  },
+
+  "usage_notes": {
+    "when_to_apply": "During FSR allocation phase of FSC development",
+    "decision_point": "Before finalizing FSR allocation to architectural elements",
+    "impact": "Affects system architecture, component selection, verification approach",
+    "approval": "Decomposition strategy should be reviewed and approved by safety team",
+    "traceability": "Maintain clear traceability from original FSR through decomposed FSRs to implementation"
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "name": "[Kineton] ISO 26262 FSC Developer",
+    "version": "0.0.1",
+    "description": "A plugin that enables AI agents to assist in creating Functional Safety Concept and derive FSRs",
+    "author_name": "Tonino De Nigris",
+    "author_url": "https://github.com/tondeni",
+    "plugin_url": "https://github.com/tondeni/-AI_Agent-FuSa_Role",
+    "tags": "ISO26262, FuSa, Functional Safety",
+    "thumb": "https://github.com/tondeni/AI_Agent-FuSa_Role/blob/master/assets/FuSa_AI_Agent_Plugin_logo.png?raw=true"
+}
