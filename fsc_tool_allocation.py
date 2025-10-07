@@ -1,6 +1,6 @@
 # fsc_tool_allocation.py
-# Manages allocation of Functional Safety Requirements to architectural elements
-# Per ISO 26262-4:2018, Clause 6.4.4
+# FSR Allocation to System Components
+# Per ISO 26262-3:2018, Clause 7.4.3
 
 from cat.mad_hatter.decorators import tool
 from cat.log import log
@@ -10,18 +10,20 @@ from datetime import datetime
 @tool(return_direct=True)
 def allocate_functional_requirements(tool_input, cat):
     """
-    Allocate Functional Safety Requirements (FSRs) to architectural elements.
+    Allocate Functional Safety Requirements to system components.
     
-    Creates allocation matrix showing which components/modules implement each FSR.
-    
-    Allocation targets:
+    Performs preliminary allocation of FSRs to:
     - Hardware components (sensors, actuators, ECUs)
-    - Software modules
-    - Communication interfaces
-    - External systems (VCU, cloud, etc.)
+    - Software functions
+    - External systems (VCU, HMI, Gateway, etc.)
+    
+    Per ISO 26262-3:2018, Clause 7.4.3:
+    - Allocate FSRs to architectural elements
+    - Define interfaces between components
+    - Document allocation rationale
     
     Input: "allocate all FSRs" or "allocate FSR-XXX to [component]"
-    Example: "allocate FSR-001-DET-1 to Voltage Monitoring Hardware"
+    Example: "allocate all FSRs"
     """
     
     print("✅ TOOL CALLED: allocate_functional_requirements")
@@ -29,90 +31,87 @@ def allocate_functional_requirements(tool_input, cat):
     fsrs = cat.working_memory.get("fsc_functional_requirements", [])
     
     if not fsrs:
-        return """❌ No FSRs available for allocation.
+        return """❌ No FSRs available.
 
-**Please first:**
-1. Load HARA: `load HARA for [item]`
-2. Derive FSRs: `derive all FSRs`
-3. Then allocate: `allocate FSRs`
+**Required Steps:**
+1. Load HARA: `load HARA for [item name]`
+2. Develop strategy: `develop safety strategy for all goals`
+3. Derive FSRs: `derive FSRs for all goals`
+4. Allocate FSRs: `allocate all FSRs`
 """
     
-    system_name = cat.working_memory.get("system_name", "the system")
     input_str = str(tool_input).strip().lower()
     
-    # Check if specific FSR allocation or batch allocation
-    if input_str in ["all", "allocate all", "all fsrs", ""]:
-        return allocate_all_fsrs_interactive(cat, fsrs, system_name)
-    else:
+    # Check if single FSR allocation
+    if ' to ' in input_str:
         return allocate_single_fsr(tool_input, cat, fsrs)
-
-
-def allocate_all_fsrs_interactive(cat, fsrs, system_name):
-    """
-    Perform intelligent batch allocation of all FSRs using LLM analysis.
-    """
     
-    log.info(f"📋 Allocating {len(fsrs)} FSRs to architectural elements")
+    # Batch allocation for all FSRs
+    system_name = cat.working_memory.get("system_name", "the system")
+    safety_goals = cat.working_memory.get("fsc_safety_goals", [])
     
-    # Build comprehensive prompt for LLM
-    prompt = f"""You are a System Architect allocating Functional Safety Requirements to architectural elements per ISO 26262-4:2018, Clause 6.4.4.
+    log.info(f"🎯 Allocating {len(fsrs)} FSRs to system components")
+    
+    # Build allocation prompt
+    prompt = f"""You are allocating Functional Safety Requirements (FSRs) to system components per ISO 26262-3:2018, Clause 7.4.3.
 
-**Context:**
-- System: {system_name}
-- Total FSRs to allocate: {len(fsrs)}
+**System:** {system_name}
+**FSRs to Allocate:** {len(fsrs)}
 
 **Your Task:**
-For each FSR, determine the most appropriate allocation to hardware, software, or external components.
+For each FSR, determine the most appropriate component allocation based on:
 
-**Allocation Guidelines:**
+1. **Functional Capability**
+   - Which component can best implement this requirement?
+   - Hardware vs Software considerations
 
-1. **Hardware Allocation** - Choose for:
-   - Direct sensing/measurement (voltage, current, temperature)
-   - Physical actuation (contactors, relays)
-   - Time-critical operations requiring dedicated hardware
-   - High diagnostic coverage requirements (ASIL C/D)
+2. **ASIL Considerations**
+   - Component must support required ASIL level
+   - Hardware for ASIL C/D detection often preferred
 
-2. **Software Allocation** - Choose for:
-   - Complex algorithms and logic
-   - Data processing and validation
-   - Coordination between components
-   - Reconfigurable functions
+3. **System Architecture**
+   - Consider existing system components
+   - Minimize interface complexity
+   - Group related FSRs to same component when logical
 
-3. **External System Allocation** - Choose for:
-   - Functions crossing item boundaries
-   - Vehicle-level decisions (e.g., VCU, HMI)
-   - Driver notifications
-   - Cloud or backend services
+**Typical Component Types:**
 
-4. **Mixed Allocation** - Use when:
-   - Function requires both HW and SW (e.g., sensor + processing)
-   - Specify primary and supporting allocations
+**Hardware Components:**
+- Sensors (voltage, current, temperature, position, etc.)
+- Actuators and control elements
+- ECU hardware (microcontroller, memory, power supply)
+- Safety monitoring circuits
 
-**Allocation Considerations:**
-- ASIL level (higher ASIL → prefer hardware or proven SW)
-- Timing constraints (FTTI → hardware for fast response)
-- Complexity (complex logic → software)
-- Independence requirements (redundant channels → separate HW)
-- Cost and feasibility
+**Software Components:**
+- Diagnostic software modules
+- Control algorithms
+- Fault handling routines
+- HMI/warning systems
+
+**External Systems:**
+- Vehicle Control Unit (VCU)
+- Human-Machine Interface (HMI)
+- Gateway/Communication module
+- External monitoring systems
 
 **Output Format:**
 
-For EACH FSR, provide:
-
 ---
 ## Allocation for FSR: [FSR-ID]
-**FSR Description:** [brief description]
+**FSR:** [Brief description]
+**Type:** [Detection/Reaction/Indication]
 **ASIL:** [X]
-**Type:** [detection/reaction/indication]
+**Linked to SG:** [SG-ID]
 
 **Primary Allocation:** [Component Name]
 - **Component Type:** [Hardware/Software/External]
-- **Rationale:** [Why this allocation is appropriate]
-- **Interface:** [How it connects to other components]
-- **Implementation Notes:** [Key technical considerations]
+- **Rationale:** [Why this component is appropriate]
+- **Interface:** [Key interfaces with other components]
+- **Supporting Components:** [Other components involved, if any]
 
-**Supporting Allocations:** [If applicable]
-- [Component 2]: [Role]
+**Allocation Notes:**
+- [Any special considerations]
+- [Dependencies on other allocations]
 
 ---
 
@@ -120,119 +119,99 @@ For EACH FSR, provide:
 
 """
     
-    # Add FSR details to prompt
     for fsr in fsrs:
         prompt += f"""
 ### {fsr['id']}
-- **Description:** {fsr['description']}
-- **ASIL:** {fsr['asil']}
-- **Type:** {fsr['type']}
-- **Parent Goal:** {fsr.get('parent_safety_goal', 'Unknown')}
+- **Description:** {fsr.get('description', 'N/A')}
+- **Type:** {fsr.get('type', 'Unknown')}
+- **ASIL:** {fsr.get('asil', 'QM')}
+- **Linked to SG:** {fsr.get('safety_goal_id', 'Unknown')}
+- **Preliminary Allocation:** {fsr.get('allocated_to', 'Not yet specified')}
 
 """
     
     prompt += """
-**Important:**
-1. Be specific with component names (e.g., "Voltage Sensor Module" not just "Hardware")
-2. Consider the entire system architecture
-3. Ensure allocations support the required timing (FTTI)
-4. Maintain independence for redundant channels
-5. Document interface types (analog, SPI, CAN, Ethernet, etc.)
+**Requirements:**
+- Each FSR must have exactly ONE primary allocation
+- Provide clear rationale for each allocation
+- Consider ASIL requirements in allocation decisions
+- Document key interfaces between components
+- Group related FSRs logically
 
-**Now provide allocations for ALL FSRs following the format above.**
+**Now allocate all FSRs to appropriate system components.**
 """
     
     try:
         allocation_analysis = cat.llm(prompt).strip()
         
-        # Parse allocations from LLM response
+        # Parse allocations from response
         allocations = parse_allocations(allocation_analysis, fsrs)
         
         # Update FSRs with allocation information
         for fsr in fsrs:
-            allocation = allocations.get(fsr['id'])
-            if allocation:
-                fsr['allocated_to'] = allocation['primary_component']
-                fsr['allocation_type'] = allocation['component_type']
-                fsr['allocation_rationale'] = allocation['rationale']
-                fsr['interface'] = allocation['interface']
-                fsr['supporting_allocations'] = allocation.get('supporting', [])
+            if fsr['id'] in allocations:
+                alloc = allocations[fsr['id']]
+                fsr['allocated_to'] = alloc['primary_component']
+                fsr['allocation_type'] = alloc['component_type']
+                fsr['allocation_rationale'] = alloc['rationale']
+                fsr['interface'] = alloc.get('interface', 'To be specified')
         
-        # Store updated FSRs and allocation matrix
+        # Store updated FSRs
         cat.working_memory["fsc_functional_requirements"] = fsrs
-        cat.working_memory["fsc_allocation_matrix"] = allocations
         cat.working_memory["fsc_stage"] = "fsrs_allocated"
         
         # Generate summary
-        hw_count = len([f for f in fsrs if f.get('allocation_type') == 'Hardware'])
-        sw_count = len([f for f in fsrs if f.get('allocation_type') == 'Software'])
-        ext_count = len([f for f in fsrs if f.get('allocation_type') == 'External'])
-        mixed_count = len([f for f in fsrs if f.get('supporting_allocations')])
+        allocated_count = len([f for f in fsrs if f.get('allocated_to')])
         
-        summary = f"""✅ **Functional Safety Requirements Allocated**
+        summary = f"""✅ **FSRs Allocated to System Components**
 
-**Allocation Summary:**
-- Total FSRs: {len(fsrs)}
-- Hardware: {hw_count} FSRs
-- Software: {sw_count} FSRs
-- External Systems: {ext_count} FSRs
-- Mixed (HW+SW): {mixed_count} FSRs
+**System:** {system_name}
+**Total FSRs:** {len(fsrs)}
+**FSRs Allocated:** {allocated_count}
 
-**Distribution by ASIL:**
+**Allocation by Component Type:**
 """
         
+        component_types = {}
+        for fsr in fsrs:
+            comp_type = fsr.get('allocation_type', 'Unallocated')
+            component_types[comp_type] = component_types.get(comp_type, 0) + 1
+        
+        for comp_type, count in sorted(component_types.items()):
+            summary += f"- {comp_type}: {count} FSRs\n"
+        
+        summary += "\n**Allocation by ASIL:**\n"
+        
         for asil in ['D', 'C', 'B', 'A']:
-            asil_fsrs = [f for f in fsrs if f['asil'] == asil]
+            asil_fsrs = [f for f in fsrs if f.get('asil') == asil and f.get('allocated_to')]
             if asil_fsrs:
-                summary += f"\n- ASIL {asil}: {len(asil_fsrs)} FSRs allocated"
+                summary += f"- ASIL {asil}: {len(asil_fsrs)} FSRs allocated\n"
         
         summary += f"""
 
 ---
 
-**Detailed Allocations:**
+**Detailed Allocation Analysis:**
 
 {allocation_analysis}
 
 ---
 
-**Allocation Matrix:**
-
-| FSR ID | Requirement | ASIL | Allocated To | Type | Interface |
-|--------|-------------|------|--------------|------|-----------|
-"""
-        
-        for fsr in fsrs[:10]:  # Show first 10 in table
-            allocated = fsr.get('allocated_to', 'TBD')
-            alloc_type = fsr.get('allocation_type', 'Unknown')
-            interface = fsr.get('interface', 'TBD')
-            summary += f"| {fsr['id']} | {fsr['description'][:40]}... | {fsr['asil']} | {allocated} | {alloc_type} | {interface} |\n"
-        
-        if len(fsrs) > 10:
-            summary += f"\n... and {len(fsrs) - 10} more FSRs\n"
-        
-        summary += """
-
----
-
-**ISO 26262-4:2018 Compliance:**
-✅ Clause 6.4.4: FSR allocation complete
-✅ Architectural elements identified
+**ISO 26262-3:2018 Compliance:**
+✅ Clause 7.4.3: FSR allocation to architectural elements
+✅ Allocation rationale documented
+✅ Interfaces identified
 
 **Next Steps:**
 
-1. **Define Functional Architecture:**
-   - `define functional architecture` - Describe component interactions
+1. **Generate FSC Document:**
+   `generate FSC document`
    
-2. **Derive Technical Safety Requirements:**
-   - `derive all TSRs` - Refine FSRs into implementation details
+2. **Review Allocation:**
+   `show allocation for [FSR-ID]`
    
-3. **Review Allocation:**
-   - `show allocation for [FSR-ID]` - View specific allocation
-   - `revise allocation for [FSR-ID]` - Modify if needed
-
-4. **Identify Safety Mechanisms:**
-   - `identify safety mechanisms` - Propose technical solutions
+3. **Revise Allocation (if needed):**
+   `allocate [FSR-ID] to [component name]`
 """
         
         return summary
@@ -280,11 +259,11 @@ def allocate_single_fsr(tool_input, cat, fsrs):
     
     # Determine component type
     component_lower = component.lower()
-    if any(word in component_lower for word in ['hardware', 'sensor', 'actuator', 'ecu', 'module']):
+    if any(word in component_lower for word in ['hardware', 'sensor', 'actuator', 'ecu', 'module', 'circuit']):
         comp_type = 'Hardware'
-    elif any(word in component_lower for word in ['software', 'algorithm', 'function', 'logic']):
+    elif any(word in component_lower for word in ['software', 'algorithm', 'function', 'logic', 'routine']):
         comp_type = 'Software'
-    elif any(word in component_lower for word in ['vcu', 'hmi', 'cluster', 'external', 'cloud']):
+    elif any(word in component_lower for word in ['vcu', 'hmi', 'cluster', 'external', 'gateway']):
         comp_type = 'External'
     else:
         comp_type = 'Hardware'  # Default
@@ -293,13 +272,13 @@ def allocate_single_fsr(tool_input, cat, fsrs):
     fsr['allocated_to'] = component
     fsr['allocation_type'] = comp_type
     fsr['allocation_rationale'] = f"Manually allocated to {component}"
-    fsr['interface'] = 'TBD - To be specified'
+    fsr['interface'] = 'To be specified in detailed design'
     
     return f"""✅ **FSR Allocated**
 
 **FSR:** {fsr_id}
-**Requirement:** {fsr['description']}
-**ASIL:** {fsr['asil']}
+**Requirement:** {fsr.get('description', 'N/A')}
+**ASIL:** {fsr.get('asil', 'QM')}
 
 **Allocated To:** {component}
 **Type:** {comp_type}
@@ -307,7 +286,7 @@ def allocate_single_fsr(tool_input, cat, fsrs):
 **Next Steps:**
 - Continue allocating: `allocate [next FSR-ID] to [component]`
 - Or batch allocate: `allocate all FSRs`
-- Define interfaces: `define interface for {fsr_id}`
+- Generate document: `generate FSC document`
 """
 
 
@@ -341,8 +320,7 @@ def parse_allocations(llm_response, fsrs):
                         'primary_component': '',
                         'component_type': 'Unknown',
                         'rationale': '',
-                        'interface': '',
-                        'supporting': []
+                        'interface': ''
                     }
                     break
         
@@ -368,207 +346,83 @@ def parse_allocations(llm_response, fsrs):
     return allocations
 
 
-@tool(return_direct=False)
-def define_functional_architecture(tool_input, cat):
+@tool(return_direct=True)
+def show_allocation_summary(tool_input, cat):
     """
-    Define high-level functional architecture showing component interactions.
+    Show allocation summary and matrix.
     
-    Describes:
-    - Safety function blocks
-    - Data flows between blocks
-    - Internal vs external interfaces
-    - Timing and dependencies
+    Displays:
+    - FSRs grouped by allocated component
+    - Allocation matrix
+    - Interface dependencies
     
-    Input: Architecture description or "generate architecture"
-    Example: "define functional architecture"
+    Input: "show allocation summary"
     """
     
     fsrs = cat.working_memory.get("fsc_functional_requirements", [])
-    system_name = cat.working_memory.get("system_name", "the system")
     
     if not fsrs:
-        return "❌ No FSRs available. Please derive FSRs first."
+        return "❌ No FSRs available."
     
-    # Check if FSRs are allocated
-    allocated_count = len([f for f in fsrs if f.get('allocated_to')])
-    if allocated_count == 0:
-        return "❌ FSRs not yet allocated. Please allocate FSRs first."
+    allocated_fsrs = [f for f in fsrs if f.get('allocated_to')]
     
-    # Build architecture definition prompt
-    prompt = f"""You are defining the Functional Architecture for {system_name} per ISO 26262-4:2018, Clause 6.4.4.
-
-**Context:**
-- System: {system_name}
-- FSRs allocated: {allocated_count}
-
-**Allocated Components:**
-"""
+    if not allocated_fsrs:
+        return "❌ No FSRs allocated yet. Use: `allocate all FSRs`"
     
-    # Extract unique components
-    components = set()
-    for fsr in fsrs:
-        if fsr.get('allocated_to'):
-            components.add(fsr['allocated_to'])
+    # Group by component
+    by_component = {}
+    for fsr in allocated_fsrs:
+        component = fsr.get('allocated_to', 'Unallocated')
+        if component not in by_component:
+            by_component[component] = []
+        by_component[component].append(fsr)
     
-    for comp in sorted(components):
-        prompt += f"- {comp}\n"
-    
-    prompt += """
+    summary = f"""📊 **FSR Allocation Summary**
 
-**Your Task:**
-Define the high-level functional architecture that shows:
-
-1. **Architecture Overview**
-   - Main functional blocks
-   - Safety-critical paths
-   - Redundancy strategy
-
-2. **Component Descriptions**
-   - Purpose of each component
-   - Safety functions implemented
-   - ASIL level of functions
-
-3. **Data Flows**
-   - Critical data paths
-   - Timing constraints
-   - Communication protocols
-
-4. **Interface Definitions**
-   - Internal interfaces (within item)
-   - External interfaces (crossing boundaries)
-   - Safety protocols
-
-5. **Dependencies**
-   - Component dependencies
-   - Power dependencies
-   - Timing dependencies
-
-**Output Format:**
-
-# Functional Architecture for [System]
-
-## Architecture Overview
-[High-level description with main blocks]
-
-## Component Descriptions
-
-### [Component 1]
-- **Purpose:** [What it does]
-- **Safety Functions:** [Which FSRs implemented]
-- **ASIL:** [Highest ASIL function]
-- **Key Interfaces:** [What it connects to]
-
-### [Component 2]
-...
-
-## Data Flow Diagram
-[Text-based description of critical data paths]
-
-## Interface Specifications
-
-### Internal Interfaces
-- [Interface 1]: [Type, Protocol, Timing]
-- [Interface 2]: ...
-
-### External Interfaces
-- [Interface 3]: [Crossing item boundary]
-- [Interface 4]: ...
-
-## Timing Architecture
-- [Critical timing paths]
-- [FTTI considerations]
-
-## Independence Analysis
-- [How independence is achieved for redundant channels]
-
-**Now generate the functional architecture description.**
-"""
-    
-    try:
-        architecture_description = cat.llm(prompt).strip()
-        
-        # Store in working memory
-        cat.working_memory["fsc_functional_architecture"] = architecture_description
-        cat.working_memory["fsc_stage"] = "architecture_defined"
-        
-        result = f"""✅ **Functional Architecture Defined**
-
-{architecture_description}
+**Total FSRs:** {len(fsrs)}
+**Allocated:** {len(allocated_fsrs)}
+**Unallocated:** {len(fsrs) - len(allocated_fsrs)}
 
 ---
 
-**ISO 26262-4:2018 Compliance:**
-✅ Clause 6.4.4: Functional architecture documented
+**Allocation by Component:**
 
-**Next Steps:**
-- Derive Technical Safety Requirements: `derive all TSRs`
-- Identify Safety Mechanisms: `identify safety mechanisms`
-- Review architecture: Ask questions about specific components
 """
+    
+    for component, comp_fsrs in sorted(by_component.items()):
+        comp_type = comp_fsrs[0].get('allocation_type', 'Unknown')
+        asil_levels = list(set(f.get('asil', 'QM') for f in comp_fsrs))
         
-        return result
+        summary += f"\n### {component} ({comp_type})\n"
+        summary += f"- **FSRs:** {len(comp_fsrs)}\n"
+        summary += f"- **ASIL Levels:** {', '.join(sorted(asil_levels, reverse=True))}\n"
+        summary += f"- **Requirements:**\n"
         
-    except Exception as e:
-        log.error(f"Error defining architecture: {e}")
-        return f"❌ Error defining architecture: {str(e)}"
-
-
-@tool(return_direct=False)
-def show_allocation_details(tool_input, cat):
-    """
-    Show detailed allocation information for a specific FSR.
+        for fsr in comp_fsrs[:5]:  # Show first 5
+            summary += f"  - {fsr['id']}: {fsr.get('type', 'Unknown')}\n"
+        
+        if len(comp_fsrs) > 5:
+            summary += f"  - ... and {len(comp_fsrs) - 5} more\n"
     
-    Input: FSR ID
-    Example: "show allocation for FSR-001-DET-1"
-    """
-    
-    fsr_id = str(tool_input).replace('FSR', '').replace('for', '').strip().upper()
-    if not fsr_id.startswith('FSR'):
-        fsr_id = 'FSR-' + fsr_id
-    
-    fsrs = cat.working_memory.get("fsc_functional_requirements", [])
-    fsr = next((f for f in fsrs if f['id'] == fsr_id), None)
-    
-    if not fsr:
-        return f"❌ FSR '{fsr_id}' not found."
-    
-    details = f"""### Allocation Details: {fsr['id']}
+    return summary
 
-**FSR Description:**
-{fsr['description']}
 
-**ASIL:** {fsr['asil']}
-**Type:** {fsr['type']}
-**Parent Safety Goal:** {fsr.get('parent_safety_goal', 'Unknown')}
+# COMMENTED OUT: Features not needed for current implementation
+# Will be implemented in Technical Safety Concept (ISO 26262-4) phase
 
----
+# @tool(return_direct=False)
+# def define_functional_architecture(tool_input, cat):
+#     """
+#     Define high-level functional architecture showing component interactions.
+#     NOTE: Detailed architecture belongs in Technical Safety Concept
+#     """
+#     pass
 
-**Allocation:**
-- **Primary Component:** {fsr.get('allocated_to', 'Not yet allocated')}
-- **Component Type:** {fsr.get('allocation_type', 'Unknown')}
-- **Interface:** {fsr.get('interface', 'Not specified')}
-
-**Rationale:**
-{fsr.get('allocation_rationale', 'Not documented')}
-
-**Supporting Allocations:**
-"""
-    
-    supporting = fsr.get('supporting_allocations', [])
-    if supporting:
-        for supp in supporting:
-            details += f"- {supp}\n"
-    else:
-        details += "None\n"
-    
-    details += """
-
----
-
-**Actions:**
-- Revise allocation: `revise allocation for {fsr_id}`
-- View architecture: `show functional architecture`
-- Continue workflow: `derive TSRs for {fsr_id}`
-"""
-    
-    return details
+# @tool(return_direct=False)
+# def derive_technical_safety_requirements(tool_input, cat):
+#     """
+#     Derive Technical Safety Requirements (TSRs) from FSRs.
+#     NOTE: This belongs in Technical Safety Concept (ISO 26262-4)
+#     Commented out for FSC phase - will be implemented in TSC plugin
+#     """
+#     pass
