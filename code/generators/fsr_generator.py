@@ -2,15 +2,14 @@
 # Business logic for deriving Functional Safety Requirements per ISO 26262-3:2018, Clause 7.4.2
 
 from typing import List, Dict, Optional, Callable
+from core.models import SafetyGoal, SafetyStrategy, FunctionalSafetyRequirement
+from core.constants import FSR_TYPE_CODES, DEFAULT_OPERATING_MODES
+from settings import FSCSettings
 import re
 import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-
-from core.models import SafetyGoal, SafetyStrategy, FunctionalSafetyRequirement
-from core.constants import FSR_TYPE_CODES, DEFAULT_OPERATING_MODES
-
 
 class FSRGenerator:
     """
@@ -22,7 +21,7 @@ class FSRGenerator:
     - FSRs are measurable and verifiable
     """
     
-    def __init__(self, llm_function: Callable[[str], str]):
+    def __init__(self, llm_function, max_fsr_per_safety_goal: Callable[[str], str]):
         """
         Initialize FSR generator.
         
@@ -30,9 +29,10 @@ class FSRGenerator:
             llm_function: Function that takes a prompt string and returns LLM response
         """
         self.llm = llm_function
+        self.max_fsr_per_safety_goal = max_fsr_per_safety_goal
     
     def generate_fsrs(self, safety_goals: List[SafetyGoal], 
-                     strategies: List[SafetyStrategy],
+                     strategies: List[SafetyStrategy], max_fsr_per_safety_goal: str,
                      system_name: str = "the system") -> List[FunctionalSafetyRequirement]:
         """
         Generate FSRs for all safety goals.
@@ -46,7 +46,7 @@ class FSRGenerator:
             List of FunctionalSafetyRequirement objects
         """
         # Build prompt for all goals
-        prompt = self._build_fsr_prompt(safety_goals, strategies, system_name)
+        prompt = self._build_fsr_prompt(safety_goals, strategies, max_fsr_per_safety_goal, system_name)
         
         # Get LLM response
         try:
@@ -63,6 +63,7 @@ class FSRGenerator:
     
     def _build_fsr_prompt(self, safety_goals: List[SafetyGoal],
                          strategies: List[SafetyStrategy],
+                         max_fsr_per_safety_goal: str,
                          system_name: str) -> str:
         """
         Build LLM prompt for FSR derivation.
@@ -75,13 +76,15 @@ class FSRGenerator:
         Returns:
             Prompt string
         """
+
+
         prompt = f"""You are deriving Functional Safety Requirements (FSRs) per ISO 26262-3:2018, Clause 7.4.2.
 
 **System:** {system_name}
 **Number of Safety Goals:** {len(safety_goals)}
 
 **Requirements per ISO 26262-3:2018:**
-- 7.4.2.2: At least ONE FSR per safety goal (aim for 5-10 FSRs per goal)
+- 7.4.2.2: At least ONE FSR per safety goal, maximum {max_fsr_per_safety_goal} for each safety goal)
 - 7.4.2.4: Each FSR shall consider:
   a) Operating modes
   b) Fault tolerant time interval (FTTI)
@@ -89,7 +92,7 @@ class FSRGenerator:
   d) Emergency operation time interval (if applicable)
   e) Functional redundancies (if applicable)
 
-**FSR Categories (use these ID formats):**
+**You can use the followinf FSR Categories (use these ID formats) as guideline:**
 - **FSR-[SG-ID]-AVD-n**: Fault Avoidance (7.4.2.3.a)
 - **FSR-[SG-ID]-DET-n**: Fault Detection (7.4.2.3.b)
 - **FSR-[SG-ID]-CTL-n**: Fault Control (7.4.2.3.b)
@@ -100,6 +103,7 @@ class FSRGenerator:
 - **FSR-[SG-ID]-ARB-n**: Arbitration (7.4.2.3.i)
 
 **CRITICAL INSTRUCTIONS:**
+- Generate MAXIMUM {max_fsr_per_safety_goal} FSRs for each safety goal
 - Output ONLY a single markdown table with ALL FSRs
 - Do NOT add section headers or explanations
 - Start directly with the table header row

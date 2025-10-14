@@ -2,13 +2,15 @@
 # Business logic for generating safety strategies per ISO 26262-3:2018, Clause 7.4.2.3
 
 from typing import List, Dict, Optional, Callable
+from core.models import SafetyGoal, SafetyStrategy
+from core.constants import STRATEGY_TYPES
+from settings import FSCSettings
 import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from core.models import SafetyGoal, SafetyStrategy
-from core.constants import STRATEGY_TYPES
+
 
 
 class StrategyGenerator:
@@ -27,7 +29,7 @@ class StrategyGenerator:
     i) Arbitration
     """
     
-    def __init__(self, llm_function: Callable[[str], str]):
+    def __init__(self, llm_function, strategy_text_length: Callable[[str], str]):
         """
         Initialize strategy generator.
         
@@ -35,8 +37,9 @@ class StrategyGenerator:
             llm_function: Function that takes a prompt string and returns LLM response
         """
         self.llm = llm_function
+        self.strategy_text_length = strategy_text_length
     
-    def generate_strategies(self, safety_goals: List[SafetyGoal], 
+    def generate_strategies(self, safety_goals: List[SafetyGoal], strategy_length: int,
                           system_name: str = "the system") -> List[SafetyStrategy]:
         """
         Generate safety strategies for all safety goals.
@@ -54,13 +57,13 @@ class StrategyGenerator:
             if not goal.is_safety_relevant():
                 continue
             
-            strategy = self.generate_strategy_for_goal(goal, system_name)
+            strategy = self.generate_strategy_for_goal(goal, strategy_length, system_name)
             if strategy:
                 strategies.append(strategy)
         
         return strategies
     
-    def generate_strategy_for_goal(self, goal: SafetyGoal, 
+    def generate_strategy_for_goal(self, goal: SafetyGoal, strategy_length: str,
                                    system_name: str = "the system") -> Optional[SafetyStrategy]:
         """
         Generate safety strategy for a single safety goal.
@@ -73,7 +76,7 @@ class StrategyGenerator:
             SafetyStrategy object or None if generation fails
         """
         # Build prompt
-        prompt = self._build_strategy_prompt(goal, system_name)
+        prompt = self._build_strategy_prompt(goal, strategy_length, system_name)
         
         # Get LLM response
         try:
@@ -92,17 +95,22 @@ class StrategyGenerator:
             print(f"Error generating strategy for {goal.id}: {e}")
             return None
     
-    def _build_strategy_prompt(self, goal: SafetyGoal, system_name: str) -> str:
+    def _build_strategy_prompt(self, goal: SafetyGoal, 
+                               strategy_text_length: str,
+                               system_name: str
+                              ) -> str:
         """
         Build LLM prompt for strategy generation.
         
         Args:
             goal: SafetyGoal object
+            strategy_text_length: maximum length of safety strategy (in lines)
             system_name: Name of the system
             
         Returns:
             Prompt string
         """
+
         prompt = f"""You are developing Functional Safety Strategies per ISO 26262-3:2018, Clause 7.4.2.3.
 
 **System:** {system_name}
@@ -112,12 +120,20 @@ class StrategyGenerator:
 **Safe State:** {goal.safe_state if goal.safe_state else 'To be specified'}
 **FTTI:** {goal.ftti if goal.ftti else 'To be determined'}
 
+
+**Requirements:**
+- Each strategy text should be approximately {strategy_text_length} lines long
+- Be specific to the safety goal
+- Focus on "what" not "how"
+- Use clear, concise language
+
 **Your Task:**
 Develop 9 comprehensive safety strategies to achieve this safety goal. Each strategy must be specific, actionable, and technically feasible.
 
 **ISO 26262-3:2018, Clause 7.4.2.3 Requirements:**
 
 You must specify strategies for the following:
+**IMPORTANT** Each strategy must be maximum {strategy_text_length} lines long
 
 ### a) Fault Avoidance Strategy (7.4.2.3.a)
 How will faults be avoided through design, component selection, or development processes?
@@ -193,6 +209,8 @@ Examples: Safety override logic, priority mechanisms, conflict resolution
 
 **Requirements:**
 - Each strategy must be specific to this safety goal and system
+- Each strategy must be long maximum {strategy_text_length} lines
+- Separate each strategy with a horizontal rule: ---
 - Strategies must be technically feasible and implementable
 - Consider ASIL {goal.asil} requirements in strategy development
 - Provide concrete examples and mechanisms

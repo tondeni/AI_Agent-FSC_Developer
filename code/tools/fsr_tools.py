@@ -40,6 +40,21 @@ def derive_functional_safety_requirements(tool_input, cat):
     """
     
     log.info("✅ TOOL CALLED: derive_functional_safety_requirements")
+    # Get plugin settings
+    settings = cat.mad_hatter.get_plugin().load_settings()
+
+    # ========================================================================
+    # Load plugin settings
+    # ========================================================================
+    try:
+        settings = cat.mad_hatter.get_plugin().load_settings()
+        max_fsr_per_safety_goal = settings.get('max_fsr_per_safety_goal', 5)
+        log.info(f"📋 Settings loaded: max_fsr_per_safety_goal ={max_fsr_per_safety_goal}")
+    except Exception as e:
+        log.warning(f"⚠️ Could not load settings, using defaults: {e}")
+        max_fsr_per_safety_goal = 5  # Default fallback
+    # ========================================================================
+
     
     # Get data from working memory
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
@@ -77,11 +92,11 @@ def derive_functional_safety_requirements(tool_input, cat):
     
     try:
         # Initialize FSR generator
-        generator = FSRGenerator(cat.llm)
+        generator = FSRGenerator(cat.llm, max_fsr_per_safety_goal)
         
         # Generate FSRs
         log.info("🔄 Generating FSRs...")
-        fsrs = generator.generate_fsrs(goals_to_process, strategies, system_name)
+        fsrs = generator.generate_fsrs(goals_to_process, strategies, max_fsr_per_safety_goal, system_name)
         
         if not fsrs:
             return "❌ Failed to generate FSRs. Please try again."
@@ -100,7 +115,7 @@ def derive_functional_safety_requirements(tool_input, cat):
         # Format output
         formatter = FSRFormatter()
         
-        # Statistics
+        #Statistics
         summary = f"""✅ **Functional Safety Requirements Derived**
 
 *ISO 26262-3:2018, Clause 7.4.2 compliance*

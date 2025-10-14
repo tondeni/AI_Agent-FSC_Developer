@@ -80,6 +80,7 @@ class SafetyStrategy:
             'complete': self.is_complete()
         }
     
+    @classmethod
     def from_dict(cls, data: Dict) -> 'SafetyStrategy':
         """Create SafetyStrategy from dictionary (ignoring computed fields)"""
         return cls(

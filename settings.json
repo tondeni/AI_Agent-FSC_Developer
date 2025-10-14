@@ -1,1 +1,4 @@
-{}
+{
+    "max_fsr_per_safety_goal": 3,
+    "safety_strategy_text_length": 3
+}

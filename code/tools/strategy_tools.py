@@ -44,6 +44,19 @@ def develop_safety_strategy(tool_input, cat):
     """
     
     log.info("✅ TOOL CALLED: develop_safety_strategy")
+
+    # ========================================================================
+    # Load plugin settings
+    # ========================================================================
+    try:
+        settings = cat.mad_hatter.get_plugin().load_settings()
+        strategy_text_length = settings.get('safety_strategy_text_length', 5)
+        log.info(f"📋 Settings loaded: strategy_text_length={strategy_text_length} lines")
+    except Exception as e:
+        log.warning(f"⚠️ Could not load settings, using defaults: {e}")
+        strategy_text_length = 5  # Default fallback
+    # ========================================================================
+
     
     # Get safety goals from working memory
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
@@ -80,11 +93,13 @@ def develop_safety_strategy(tool_input, cat):
     
     try:
         # Initialize strategy generator
-        generator = StrategyGenerator(cat.llm)
+        generator = StrategyGenerator(
+            llm_function=cat.llm,
+            strategy_text_length=strategy_text_length)
         
         # Generate strategies
         log.info("🔄 Generating safety strategies...")
-        strategies = generator.generate_strategies(goals_to_process, system_name)
+        strategies = generator.generate_strategies(goals_to_process, strategy_text_length, system_name)
         
         if not strategies:
             return "❌ Failed to generate strategies. Please try again."
