@@ -72,8 +72,6 @@ def load_hara_for_fsc(tool_input, cat):
     # Find and load HARA data
     hara_data = loader.load_hara(item_name, cat)
     
-
-
     # Check what find_hara_files returns
     files = find_hara_files()
     log.warning(f"Found HARA files: {files}")

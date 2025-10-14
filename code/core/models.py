@@ -79,6 +79,13 @@ class SafetyStrategy:
             'strategies': self.strategies,
             'complete': self.is_complete()
         }
+    
+    def from_dict(cls, data: Dict) -> 'SafetyStrategy':
+        """Create SafetyStrategy from dictionary (ignoring computed fields)"""
+        return cls(
+            safety_goal_id=data['safety_goal_id'],
+            strategies=data.get('strategies', {})
+        )
 
 
 @dataclass

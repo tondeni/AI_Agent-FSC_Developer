@@ -4,6 +4,7 @@
 
 import openpyxl
 from typing import Optional, Dict, List
+from cat.log import log
 import sys
 import os
 import logging
@@ -18,6 +19,14 @@ from core.constants import (
     DEFAULT_SAFE_STATE,
     DEFAULT_FTTI
 )
+
+try:
+    import openpyxl
+    EXCEL_AVAILABLE = True
+except ImportError:
+    EXCEL_AVAILABLE = False
+    log.warning("openpyxl not available - Excel file reading will be disabled")
+
 
 # Setup logging
 log = logging.getLogger(__name__)
@@ -74,7 +83,7 @@ class ExcelHARAParser(BaseHARAParser):
             HaraData object if successful, None otherwise
         """
         try:
-            log.info(f"📖 Loading HARA from: {os.path.basename(self.file_path)}")
+            log.warning(f"📖 Loading HARA from: {os.path.basename(self.file_path)}")
             
             # Load workbook
             self.workbook = openpyxl.load_workbook(self.file_path, data_only=True)

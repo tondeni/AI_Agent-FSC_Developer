@@ -56,7 +56,7 @@ def derive_functional_safety_requirements(tool_input, cat):
     
     # Convert to objects
     safety_goals = [SafetyGoal(**g) for g in safety_goals_data]
-    strategies = [SafetyStrategy(**s) for s in strategies_data] if strategies_data else []
+    strategies = [SafetyStrategy.from_dict(s) for s in strategies_data] if strategies_data else []
     system_name = cat.working_memory.get("system_name", "the system")
     
     # Parse input
