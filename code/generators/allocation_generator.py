@@ -1,5 +1,6 @@
 # generators/allocation_generator.py
 # Business logic for allocating FSRs to architectural elements per ISO 26262-3:2018, Clause 7.4.2.8
+# IMPROVED VERSION - Following FSR Generator Pattern
 
 from typing import List, Dict, Optional, Callable, Tuple
 import re
@@ -10,6 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from core.models import FunctionalSafetyRequirement, SafetyGoal
 from core.constants import AllocationType
+from cat.log import log
 
 
 class AllocationGenerator:
@@ -46,17 +48,36 @@ class AllocationGenerator:
         Returns:
             List of FSR objects with updated allocation information
         """
+        log.info("🏗️ Starting FSR allocation to architectural elements")
+        log.info(f"📊 System: {system_name}")
+        log.info(f"📋 FSRs to allocate: {len(fsrs)}")
+        log.info(f"🎯 Safety goals: {len(safety_goals)}")
+        
         # Build prompt
         prompt = self._build_allocation_prompt(fsrs, safety_goals, system_name)
         
         # Get LLM response
         try:
+            log.info("🤖 Calling LLM for allocation...")
             response = self.llm(prompt)
             
-            # Parse allocations
+            log.info(f"📥 Received LLM response ({len(response)} chars)")
+            log.info("=" * 80)
+            log.info("LLM RESPONSE PREVIEW:")
+            log.info(response[:1000] if len(response) > 1000 else response)
+            log.info("=" * 80)
+            
+            # Parse allocations with multiple strategies
             allocations = self._parse_allocations(response, fsrs)
             
+            if not allocations:
+                log.warning("⚠️ No allocations parsed from LLM response")
+                return fsrs
+            
+            log.info(f"✅ Successfully parsed {len(allocations)} allocations")
+            
             # Update FSRs with allocation information
+            updated_count = 0
             for fsr in fsrs:
                 if fsr.id in allocations:
                     alloc = allocations[fsr.id]
@@ -64,11 +85,19 @@ class AllocationGenerator:
                     fsr.allocation_type = alloc['component_type']
                     fsr.allocation_rationale = alloc['rationale']
                     fsr.interface = alloc.get('interface', 'To be specified in detailed design')
+                    updated_count += 1
+                    log.info(f"✅ Allocated {fsr.id} → {fsr.allocated_to}")
+                else:
+                    log.warning(f"⚠️ No allocation found for {fsr.id}")
+            
+            log.info(f"✅ Allocation complete: {updated_count}/{len(fsrs)} FSRs allocated")
             
             return fsrs
             
         except Exception as e:
-            print(f"Error allocating FSRs: {e}")
+            log.error(f"❌ Error allocating FSRs: {e}")
+            import traceback
+            log.error(traceback.format_exc())
             return fsrs
     
     def allocate_single_fsr(self, fsr: FunctionalSafetyRequirement,
@@ -83,6 +112,8 @@ class AllocationGenerator:
         Returns:
             Updated FSR object
         """
+        log.info(f"🎯 Manual allocation: {fsr.id} → {component}")
+        
         # Determine component type
         component_type = self._determine_component_type(component)
         
@@ -91,6 +122,8 @@ class AllocationGenerator:
         fsr.allocation_type = component_type
         fsr.allocation_rationale = f"Manually allocated to {component}"
         fsr.interface = "To be specified in detailed design"
+        
+        log.info(f"✅ Allocated {fsr.id} to {component} ({component_type})")
         
         return fsr
     
@@ -113,14 +146,25 @@ class AllocationGenerator:
 **System:** {system_name}
 **FSRs to Allocate:** {len(fsrs)}
 
+**CRITICAL: You MUST use this EXACT format for each allocation:**
+
+```
+---
+## Allocation for FSR: FSR-SG-001-DET-1
+**Primary Allocation:** Battery Voltage Sensor
+- **Component Type:** Hardware
+- **Rationale:** Hardware sensor provides direct voltage measurement with high reliability required for ASIL C
+- **Interface:** Analog voltage signal to microcontroller ADC, I2C diagnostic interface
+---
+```
+
 **ISO 26262-3:2018, 7.4.2.8 Requirements:**
 
 a) ASIL shall be inherited from safety goal (or decomposed per ISO 26262-9)
 b) Freedom from interference shall be considered
 c) Interface specifications shall be defined for multiple E/E systems
 
-**Your Task:**
-For each FSR, determine the most appropriate component allocation based on:
+**Allocation Guidelines:**
 
 1. **Functional Capability**
    - Which component can best implement this requirement?
@@ -142,59 +186,34 @@ For each FSR, determine the most appropriate component allocation based on:
    - Spatial and temporal independence
    - Resource allocation and partitioning
 
-**Typical Component Types:**
+**Component Types to Consider:**
 
-**Hardware Components:**
-- Sensors (voltage, current, temperature, position, speed, pressure, etc.)
-- Actuators and control elements (motors, valves, relays)
-- ECU hardware (microcontroller, memory, power supply, communication)
-- Safety monitoring circuits (watchdog, voltage monitor, current monitor)
+**Hardware:**
+- Sensors: voltage, current, temperature, position, speed, pressure
+- Actuators: motors, valves, relays, solenoids
+- ECU Hardware: microcontroller, memory, power supply, watchdog
+- Safety Circuits: voltage monitor, current monitor, safety relay
 - Redundant channels
 
-**Software Components:**
-- Diagnostic software modules
-- Control algorithms and logic
-- Fault handling routines
+**Software:**
+- Diagnostic modules
+- Control algorithms
+- Fault handlers
 - State machines
 - HMI/warning systems
-- Communication protocol handlers
+- Protocol handlers
 
 **External Systems:**
 - Vehicle Control Unit (VCU)
 - Body Control Module (BCM)
-- Human-Machine Interface (HMI)
 - Gateway/Communication module
-- External monitoring systems
-- Cloud services (if applicable)
+- HMI display
+- Cloud services
 
-**Mechanical Elements:**
-- Physical fail-safe mechanisms
+**Mechanical:**
+- Fail-safe mechanisms
 - Spring-return actuators
-- Mechanical locks/interlocks
-
-**Output Format:**
-
-For each FSR, provide:
-
----
-## Allocation for FSR: [FSR-ID]
-**FSR:** [Brief description]
-**Type:** [Detection/Control/Transition/etc.]
-**ASIL:** [X]
-**Linked to SG:** [SG-ID]
-
-**Primary Allocation:** [Component Name]
-- **Component Type:** [Hardware/Software/External/Mechanical]
-- **Rationale:** [Why this component is appropriate - technical justification]
-- **Interface:** [Key interfaces with other components]
-- **Supporting Components:** [Other components involved, if any]
-
-**Allocation Notes:**
-- [ASIL considerations]
-- [Freedom from interference measures]
-- [Dependencies on other allocations]
-
----
+- Mechanical locks
 
 **FSRs to Allocate:**
 
@@ -206,13 +225,14 @@ For each FSR, provide:
 - **Description:** {fsr.description}
 - **Type:** {fsr.type}
 - **ASIL:** {fsr.asil}
-- **Linked to SG:** {fsr.safety_goal_id}
-- **Preliminary Allocation:** {fsr.allocated_to if fsr.allocated_to else 'Not yet specified'}
+- **Safety Goal:** {fsr.safety_goal_id}
+- **Current Allocation:** {fsr.allocated_to if fsr.allocated_to else 'Not specified'}
 
 """
         
         prompt += """
 **Requirements:**
+- Use the EXACT format shown above (starting with --- and ending with ---)
 - Each FSR must have exactly ONE primary allocation
 - Provide clear technical rationale for each allocation
 - Consider ASIL requirements in allocation decisions
@@ -220,7 +240,7 @@ For each FSR, provide:
 - Group related FSRs logically when appropriate
 - Ensure freedom from interference for different ASIL levels
 
-**Now allocate all FSRs to appropriate system components.**
+**Start allocating all FSRs now. Remember: Use the exact format with --- delimiters!**
 """
         
         return prompt
@@ -228,7 +248,7 @@ For each FSR, provide:
     def _parse_allocations(self, llm_response: str,
                           fsrs: List[FunctionalSafetyRequirement]) -> Dict:
         """
-        Parse allocation information from LLM response.
+        Parse allocation information from LLM response with multiple strategies.
         
         Args:
             llm_response: LLM output text
@@ -237,24 +257,76 @@ For each FSR, provide:
         Returns:
             Dictionary mapping FSR ID to allocation information
         """
+        log.info("🔍 Starting allocation parsing")
+        
+        # Strategy 1: Structured text format (primary)
+        allocations = self._parse_from_structured_text(llm_response, fsrs)
+        if allocations:
+            log.info(f"✅ Parsed {len(allocations)} allocations from structured text")
+            return allocations
+        
+        # Strategy 2: Section-based parsing (fallback)
+        log.info("Trying section-based parser")
+        allocations = self._parse_from_sections(llm_response, fsrs)
+        if allocations:
+            log.info(f"✅ Parsed {len(allocations)} allocations from sections")
+            return allocations
+        
+        # Strategy 3: Regex extraction (aggressive last resort)
+        log.info("Trying regex extraction parser")
+        allocations = self._parse_with_regex(llm_response, fsrs)
+        if allocations:
+            log.info(f"✅ Parsed {len(allocations)} allocations with regex")
+            return allocations
+        
+        log.error("❌ All parsing strategies failed")
+        return {}
+    
+    def _parse_from_structured_text(self, response: str,
+                                    fsrs: List[FunctionalSafetyRequirement]) -> Dict:
+        """
+        Parse allocations from structured text format (primary strategy).
+        
+        Expected format:
+        ---
+        ## Allocation for FSR: FSR-ID
+        **Primary Allocation:** Component Name
+        - **Component Type:** Type
+        - **Rationale:** Reason
+        - **Interface:** Interface description
+        ---
+        """
         allocations = {}
+        lines = response.split('\n')
+        
         current_fsr_id = None
         current_allocation = {}
-        
-        lines = llm_response.split('\n')
+        in_allocation_block = False
         
         for line in lines:
-            line = line.strip()
+            line_stripped = line.strip()
             
-            # Detect FSR section
-            if line.startswith('## Allocation for FSR:'):
-                # Save previous allocation
-                if current_fsr_id and current_allocation:
+            # Start of allocation block
+            if line_stripped == '---':
+                if current_fsr_id and current_allocation and 'primary_component' in current_allocation:
+                    # Save previous allocation
                     allocations[current_fsr_id] = current_allocation
+                    log.info(f"Parsed allocation for {current_fsr_id}")
                 
-                # Start new allocation
+                # Toggle block state
+                in_allocation_block = not in_allocation_block
+                current_fsr_id = None
+                current_allocation = {}
+                continue
+            
+            if not in_allocation_block:
+                continue
+            
+            # Detect FSR ID
+            if line_stripped.startswith('## Allocation for FSR:'):
+                # Extract FSR ID
                 for fsr in fsrs:
-                    if fsr.id in line:
+                    if fsr.id in line_stripped:
                         current_fsr_id = fsr.id
                         current_allocation = {
                             'fsr_id': fsr.id,
@@ -266,22 +338,169 @@ For each FSR, provide:
                         break
             
             # Parse allocation fields
-            if current_fsr_id:
-                if line.startswith('**Primary Allocation:**'):
-                    current_allocation['primary_component'] = line.replace('**Primary Allocation:**', '').strip()
-                elif line.startswith('- **Component Type:**'):
-                    comp_type = line.replace('- **Component Type:**', '').strip()
+            elif current_fsr_id:
+                if line_stripped.startswith('**Primary Allocation:**'):
+                    current_allocation['primary_component'] = line_stripped.replace('**Primary Allocation:**', '').strip()
+                elif line_stripped.startswith('- **Component Type:**'):
+                    comp_type = line_stripped.replace('- **Component Type:**', '').strip()
                     current_allocation['component_type'] = comp_type
-                elif line.startswith('- **Rationale:**'):
-                    rationale = line.replace('- **Rationale:**', '').strip()
+                elif line_stripped.startswith('- **Rationale:**'):
+                    rationale = line_stripped.replace('- **Rationale:**', '').strip()
                     current_allocation['rationale'] = rationale
-                elif line.startswith('- **Interface:**'):
-                    interface = line.replace('- **Interface:**', '').strip()
+                elif line_stripped.startswith('- **Interface:**'):
+                    interface = line_stripped.replace('- **Interface:**', '').strip()
                     current_allocation['interface'] = interface
         
         # Save last allocation
-        if current_fsr_id and current_allocation:
+        if current_fsr_id and current_allocation and 'primary_component' in current_allocation:
             allocations[current_fsr_id] = current_allocation
+        
+        return allocations
+    
+    def _parse_from_sections(self, response: str,
+                            fsrs: List[FunctionalSafetyRequirement]) -> Dict:
+        """
+        Parse allocations from section-based format (fallback strategy).
+        
+        Looks for sections starting with ## and containing FSR IDs.
+        """
+        allocations = {}
+        lines = response.split('\n')
+        
+        current_fsr_id = None
+        current_section = []
+        
+        for line in lines:
+            line_stripped = line.strip()
+            
+            # New section header
+            if line_stripped.startswith('##'):
+                # Process previous section
+                if current_fsr_id and current_section:
+                    allocation = self._extract_allocation_from_section(
+                        current_fsr_id, current_section
+                    )
+                    if allocation:
+                        allocations[current_fsr_id] = allocation
+                        log.info(f"Extracted allocation for {current_fsr_id} from section")
+                
+                # Start new section
+                current_section = [line]
+                current_fsr_id = None
+                
+                # Find FSR ID in header
+                for fsr in fsrs:
+                    if fsr.id in line_stripped:
+                        current_fsr_id = fsr.id
+                        break
+            else:
+                current_section.append(line)
+        
+        # Process last section
+        if current_fsr_id and current_section:
+            allocation = self._extract_allocation_from_section(
+                current_fsr_id, current_section
+            )
+            if allocation:
+                allocations[current_fsr_id] = allocation
+        
+        return allocations
+    
+    def _extract_allocation_from_section(self, fsr_id: str, 
+                                        section_lines: List[str]) -> Optional[Dict]:
+        """Extract allocation info from a section of text."""
+        section_text = '\n'.join(section_lines)
+        
+        allocation = {
+            'fsr_id': fsr_id,
+            'primary_component': '',
+            'component_type': 'Unknown',
+            'rationale': '',
+            'interface': ''
+        }
+        
+        # Look for component name (usually after "Allocation:" or "Component:")
+        component_patterns = [
+            r'Primary Allocation[:\s]+([^\n]+)',
+            r'Allocated to[:\s]+([^\n]+)',
+            r'Component[:\s]+([^\n]+)',
+        ]
+        
+        for pattern in component_patterns:
+            match = re.search(pattern, section_text, re.IGNORECASE)
+            if match:
+                allocation['primary_component'] = match.group(1).strip()
+                break
+        
+        # Look for component type
+        type_match = re.search(r'Component Type[:\s]+([^\n]+)', section_text, re.IGNORECASE)
+        if type_match:
+            allocation['component_type'] = type_match.group(1).strip()
+        
+        # Look for rationale
+        rationale_match = re.search(r'Rationale[:\s]+([^\n]+)', section_text, re.IGNORECASE)
+        if rationale_match:
+            allocation['rationale'] = rationale_match.group(1).strip()
+        
+        # Look for interface
+        interface_match = re.search(r'Interface[:\s]+([^\n]+)', section_text, re.IGNORECASE)
+        if interface_match:
+            allocation['interface'] = interface_match.group(1).strip()
+        
+        # Only return if we found at least a component name
+        if allocation['primary_component']:
+            return allocation
+        
+        return None
+    
+    def _parse_with_regex(self, response: str,
+                         fsrs: List[FunctionalSafetyRequirement]) -> Dict:
+        """
+        Aggressive regex-based extraction as last resort.
+        
+        Looks for any mention of FSR IDs and tries to find associated component names.
+        """
+        allocations = {}
+        
+        log.info("🔍 Starting aggressive regex parsing")
+        
+        for fsr in fsrs:
+            # Find FSR ID in text
+            pattern = re.escape(fsr.id) + r'[^\n]*'
+            matches = re.finditer(pattern, response)
+            
+            for match in matches:
+                # Get context around FSR ID (next 5 lines)
+                start_pos = match.start()
+                context_text = response[start_pos:start_pos + 500]
+                
+                # Look for component indicators
+                component_patterns = [
+                    r'(?:allocated to|assign to|component|element)[:\s]+([A-Z][A-Za-z\s]{3,40})',
+                    r'(?:hardware|software|sensor|monitor|controller|module)[:\s]+([A-Z][A-Za-z\s]{3,40})',
+                ]
+                
+                component_name = None
+                for pattern in component_patterns:
+                    comp_match = re.search(pattern, context_text, re.IGNORECASE)
+                    if comp_match:
+                        component_name = comp_match.group(1).strip()
+                        # Clean up
+                        component_name = component_name.split('\n')[0]
+                        component_name = component_name.split(',')[0]
+                        if len(component_name) > 5:  # Reasonable name length
+                            break
+                
+                if component_name:
+                    allocations[fsr.id] = {
+                        'fsr_id': fsr.id,
+                        'primary_component': component_name,
+                        'component_type': self._determine_component_type(component_name),
+                        'rationale': f"Extracted from LLM response for {fsr.id}",
+                        'interface': 'To be specified'
+                    }
+                    log.info(f"Regex extracted: {fsr.id} → {component_name}")
+                    break  # Found allocation, move to next FSR
         
         return allocations
     
@@ -301,21 +520,23 @@ For each FSR, provide:
         if any(word in component_lower for word in [
             'hardware', 'sensor', 'actuator', 'ecu', 'module', 
             'circuit', 'monitor', 'controller', 'relay', 'valve',
-            'motor', 'microcontroller', 'watchdog'
+            'motor', 'microcontroller', 'watchdog', 'voltage', 'current',
+            'temperature', 'pressure', 'speed', 'position'
         ]):
             return AllocationType.HARDWARE.value
         
         # Software keywords
         elif any(word in component_lower for word in [
             'software', 'algorithm', 'function', 'logic', 'routine',
-            'application', 'driver', 'handler', 'protocol', 'stack'
+            'application', 'driver', 'handler', 'protocol', 'stack',
+            'diagnostic', 'fault', 'state machine'
         ]):
             return AllocationType.SOFTWARE.value
         
         # External keywords
         elif any(word in component_lower for word in [
             'vcu', 'hmi', 'cluster', 'external', 'gateway', 'bcm',
-            'vehicle', 'network', 'bus', 'cloud'
+            'vehicle', 'network', 'bus', 'cloud', 'display'
         ]):
             return AllocationType.EXTERNAL.value
         
@@ -440,12 +661,9 @@ class AllocationAnalyzer:
         if unallocated:
             issues.append(f"{len(unallocated)} FSRs not allocated: {', '.join([f.id for f in unallocated[:5]])}")
         
-        # Check: ASIL integrity (warning if different from parent)
-        # This is just a check, not an error, as ASIL decomposition may be valid
-        
         # Check: No placeholder allocations
-        placeholder_terms = ['tbd', 'to be determined', 'unknown', 'placeholder']
-        placeholders = [f for f in fsrs if any(term in f.allocated_to.lower() for term in placeholder_terms)]
+        placeholder_terms = ['tbd', 'to be determined', 'unknown', 'placeholder', 'not specified']
+        placeholders = [f for f in fsrs if f.allocated_to and any(term in f.allocated_to.lower() for term in placeholder_terms)]
         if placeholders:
             issues.append(f"{len(placeholders)} FSRs have placeholder allocations")
         

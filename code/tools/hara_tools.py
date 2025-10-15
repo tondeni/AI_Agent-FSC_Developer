@@ -317,42 +317,24 @@ def _build_hara_summary(hara_data, validation_result):
     
     summary += "\n---\n\n"
     
-    # Add workflow next steps
-    summary += """**Completed:**
-- ✅ Step 1: Safety Goals extracted from HARA
-   
-**Next Steps per ISO 26262-3:2018 - Functional Safety Concept Development**
+    # workflow_section = """***ISO 26262-3:2018 - Functional Safety Concept Development Workflow***"""
+    
+    # completed__workflow_content ="""| Step | Phase | ISO 26262:3 clause | Status |
+    # |------|-------|------------------|--------------|
+    # | ✅   | Identify Safety Goals | 7.3.1 | Safety Goals extracted from HARA |"""
+      
+    # # Add workflow next steps
+    # pending_workflow_content = """| Step | Phase | ISO 26262:3 clause | Tool Command |
+    # |------|-------|------------------|--------------|
+    # | 2 | Develop Safety Strategy | 7.4.2.3 | `develop safety strategy for all goals` |
+    # | 3 | Derive Functional Safety Requirements | 7.4.2.2 | `derive FSRs for all goals` |
+    # | 4 | Allocate FSRs to system architecture | 7.4.2.8 | `allocate all FSRs` |
+    # | 5 | Specify Validation Criteria | 7.4.3 | `specify validation criteria` |
+    # | 6 | Verify FSC | 7.4.4 | `verify FSC` |
+    # | 7 | Generate FSC Document | 7.5 | `generate FSC document` |"""
 
-➡️ **Step 2:** Develop Safety Strategy (Clause 7.4.2.3)
-   ```
-   develop safety strategy for all goals
-   ```
+    # summary += workflow_section + "\n " + completed__workflow_content + "\n **Next Steps** \n" + pending_workflow_content
 
-➡️ **Step 3:** Derive Functional Safety Requirements (Clause 7.4.2.1)
-   ```
-   derive FSRs for all goals
-   ```
-
-➡️ **Step 4:** Allocate FSRs to system architecture
-   ```
-   allocate all FSRs
-   ```
-
-➡️ **Step 5:** Specify Validation Criteria
-   ```
-   specify validation criteria
-   ```
-
-➡️ **Step 6:** Verify FSC
-   ```
-   verify FSC
-   ```
-
-➡️ **Step 7:** Generate FSC Document
-   ```
-   generate FSC document
-   ```
-"""
     
     return summary
 

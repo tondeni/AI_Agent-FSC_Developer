@@ -4,6 +4,7 @@
 from typing import List, Dict, Optional, Callable
 from core.models import SafetyGoal, SafetyStrategy, FunctionalSafetyRequirement
 from core.constants import FSR_TYPE_CODES, DEFAULT_OPERATING_MODES
+from cat.log import log
 from settings import FSCSettings
 import re
 import sys
@@ -15,182 +16,309 @@ class FSRGenerator:
     """
     Derives Functional Safety Requirements from safety goals and strategies.
     Per ISO 26262-3:2018, Clause 7.4.2
-    
-    - At least one FSR per safety goal (7.4.2.2)
-    - FSRs consider all required aspects (7.4.2.4)
-    - FSRs are measurable and verifiable
     """
     
-    def __init__(self, llm_function, max_fsr_per_safety_goal: Callable[[str], str]):
+    def __init__(self, llm_function, max_fsr_per_safety_goal: int):
         """
         Initialize FSR generator.
         
         Args:
             llm_function: Function that takes a prompt string and returns LLM response
+            max_fsr_per_safety_goal: Maximum FSRs per safety goal
         """
         self.llm = llm_function
         self.max_fsr_per_safety_goal = max_fsr_per_safety_goal
     
-    def generate_fsrs(self, safety_goals: List[SafetyGoal], 
-                     strategies: List[SafetyStrategy], max_fsr_per_safety_goal: str,
-                     system_name: str = "the system") -> List[FunctionalSafetyRequirement]:
-        """
-        Generate FSRs for all safety goals.
+    def generate_fsrs(self, 
+                      safety_goals: List[SafetyGoal], 
+                      strategies: List[SafetyStrategy], 
+                      max_fsr_per_safety_goal: int,
+                      system_name: str = "the system") -> List[FunctionalSafetyRequirement]:
+        """Generate FSRs for all safety goals."""
         
-        Args:
-            safety_goals: List of SafetyGoal objects
-            strategies: List of SafetyStrategy objects (optional, improves FSR quality)
-            system_name: Name of the system
-            
-        Returns:
-            List of FunctionalSafetyRequirement objects
-        """
-        # Build prompt for all goals
         prompt = self._build_fsr_prompt(safety_goals, strategies, max_fsr_per_safety_goal, system_name)
         
-        # Get LLM response
         try:
+            log.info("🤖 Calling LLM for FSR generation")
             response = self.llm(prompt)
             
-            # Parse FSRs from response
+            log.info(f"📥 Received LLM response ({len(response)} chars)")
+            log.info("=" * 80)
+            log.info("LLM RESPONSE PREVIEW:")
+            log.info(response[:1000] if len(response) > 1000 else response)
+            log.info("=" * 80)
+            
             fsrs = self._parse_fsrs(response, safety_goals)
+            
+            if fsrs:
+                log.info(f"✅ Successfully parsed {len(fsrs)} FSRs")
+            else:
+                log.warning("⚠️ No FSRs parsed from response")
             
             return fsrs
             
         except Exception as e:
-            print(f"Error generating FSRs: {e}")
+            log.error(f"❌ Error generating FSRs: {e}")
+            import traceback
+            log.error(traceback.format_exc())
             return []
     
-    def _build_fsr_prompt(self, safety_goals: List[SafetyGoal],
+    def _build_fsr_prompt(self, 
+                         safety_goals: List[SafetyGoal],
                          strategies: List[SafetyStrategy],
-                         max_fsr_per_safety_goal: str,
+                         max_fsr_per_safety_goal: int,
                          system_name: str) -> str:
-        """
-        Build LLM prompt for FSR derivation.
+        """Build LLM prompt with VERY clear format instructions."""
         
-        Args:
-            safety_goals: List of SafetyGoal objects
-            strategies: List of SafetyStrategy objects
-            system_name: Name of the system
-            
-        Returns:
-            Prompt string
-        """
-
-
-        prompt = f"""You are deriving Functional Safety Requirements (FSRs) per ISO 26262-3:2018, Clause 7.4.2.
+        prompt = f"""You are an ISO 26262 Functional Safety expert deriving Functional Safety Requirements (FSRs).
 
 **System:** {system_name}
-**Number of Safety Goals:** {len(safety_goals)}
+**Task:** Derive {max_fsr_per_safety_goal} FSRs for each safety goal below.
 
-**Requirements per ISO 26262-3:2018:**
-- 7.4.2.2: At least ONE FSR per safety goal, maximum {max_fsr_per_safety_goal} for each safety goal)
-- 7.4.2.4: Each FSR shall consider:
-  a) Operating modes
-  b) Fault tolerant time interval (FTTI)
-  c) Safe states
-  d) Emergency operation time interval (if applicable)
-  e) Functional redundancies (if applicable)
+**CRITICAL: You MUST use this EXACT format for each FSR:**
 
-**You can use the followinf FSR Categories (use these ID formats) as guideline:**
-- **FSR-[SG-ID]-AVD-n**: Fault Avoidance (7.4.2.3.a)
-- **FSR-[SG-ID]-DET-n**: Fault Detection (7.4.2.3.b)
-- **FSR-[SG-ID]-CTL-n**: Fault Control (7.4.2.3.b)
-- **FSR-[SG-ID]-SST-n**: Safe State Transition (7.4.2.3.c)
-- **FSR-[SG-ID]-TOL-n**: Fault Tolerance (7.4.2.3.d)
-- **FSR-[SG-ID]-WRN-n**: Warning/Indication (7.4.2.3.f,g)
-- **FSR-[SG-ID]-TIM-n**: Timing (7.4.2.3.h)
-- **FSR-[SG-ID]-ARB-n**: Arbitration (7.4.2.3.i)
+```
+FSR-ID: FSR-SG-001-DET-1
+Description: The system shall detect battery voltage deviation greater than 5% from nominal value
+Category: Detection
+ASIL: C
+Safety Goal: SG-001
+Allocation: Battery Voltage Sensor
+Verification: Test with simulated voltage variations
+FTTI: 100ms
+---
+```
 
-**CRITICAL INSTRUCTIONS:**
-- Generate MAXIMUM {max_fsr_per_safety_goal} FSRs for each safety goal
-- Output ONLY a single markdown table with ALL FSRs
-- Do NOT add section headers or explanations
-- Start directly with the table header row
-- Use exact FSR ID format: FSR-SG-XXX-CATEGORY-N
+**Important Rules:**
+1. Start each FSR with "FSR-ID:" (exactly this format)
+2. End each FSR with "---" (three dashes)
+3. Include ALL fields for each FSR
+4. Use these categories: Detection, Control, Warning, Avoidance, Safe State, Tolerance, Timing, Arbitration
+5. FSR ID format: FSR-SG-ID-TYPE-NUMBER
+   - Example: FSR-SG-001-DET-1, FSR-SG-001-CTL-1, FSR-SG-002-DET-1
 
-**Table Columns:**
-| FSR ID | FSR Description | FSR Allocation | FSR ASIL | Linked Safety Goal | Validation and Verification Criteria | Time Constraints FTTI |
-
-**Example Row:**
-| FSR-SG-001-DET-1 | Detect voltage deviation >5% within 50ms | Voltage Monitor Hardware | C | SG-001 | HIL test with fault injection under all operating modes | 50ms |
-
-**FSR Quality Requirements:**
-- Measurable (include thresholds, timing)
-- Verifiable (testable)
-- Specific (not vague)
-- Complete (covers all aspects)
-- Traceable to safety goal
-
-**Safety Goals to Derive FSRs From:**
+**Safety Goals:**
 
 """
         
+        # Add safety goals with context
         for goal in safety_goals:
             if not goal.is_safety_relevant():
                 continue
             
-            prompt += f"\n### {goal.id}\n"
-            prompt += f"**Safety Goal:** {goal.description}\n"
-            prompt += f"**ASIL:** {goal.asil}\n"
-            prompt += f"**Safe State:** {goal.safe_state if goal.safe_state else 'To be specified'}\n"
-            prompt += f"**FTTI:** {goal.ftti if goal.ftti else 'To be determined'}\n"
+            prompt += f"\n**{goal.id}**: {goal.description}\n"
+            prompt += f"- ASIL: {goal.asil}\n"
+            prompt += f"- Safe State: {goal.safe_state if goal.safe_state else 'To be specified'}\n"
+            prompt += f"- FTTI: {goal.ftti if goal.ftti else 'To be determined'}\n"
             
-            # Add strategy if available
-            strategy = next((s for s in strategies if s.safety_goal_id == goal.id), None)
-            if strategy and strategy.strategies:
-                prompt += f"\n**Key Strategies:**\n"
-                for key in ['fault_detection', 'fault_control', 'safe_state_transition']:
-                    if key in strategy.strategies:
-                        prompt += f"- {strategy.strategies[key][:100]}...\n"
+            # Add strategies if available
+            # Commented out since there is a issue with strategy_type (not defined)
+            # goal_strategies = [s for s in strategies if s.safety_goal_id == goal.id]
+            # if goal_strategies:
+            #     prompt += "- Key Strategies:\n"
+            #     for strategy in goal_strategies[:2]:
+            #         prompt += f"  * {strategy.strategy_type}: {strategy.description[:80]}...\n"
             
             prompt += "\n"
         
-        prompt += """
+        prompt += f"""
+**Generate {max_fsr_per_safety_goal} FSRs for EACH safety goal above.**
 
-**Now generate FSRs in TABLE FORMAT ONLY. Start with the header row:**
+Remember:
+- Use the EXACT format shown (FSR-ID:, Description:, etc.)
+- End each FSR with "---"
+- Make FSRs specific and measurable
+- Use appropriate categories (Detection, Control, Warning, etc.)
+
+**Start generating FSRs now:**
 """
         
         return prompt
     
     def _parse_fsrs(self, llm_response: str, 
                    safety_goals: List[SafetyGoal]) -> List[FunctionalSafetyRequirement]:
-        """
-        Parse FSRs from LLM response.
+        """Parse FSRs with multiple fallback strategies."""
         
-        Args:
-            llm_response: LLM output containing FSRs
-            safety_goals: List of safety goals for reference
-            
-        Returns:
-            List of FunctionalSafetyRequirement objects
-        """
-        # Try table format first
-        fsrs = self._parse_fsrs_from_table(llm_response, safety_goals)
+        log.info("Starting FSR parsing")
         
+        # Strategy 1: Structured text format (primary)
+        fsrs = self._parse_fsrs_from_structured_text(llm_response, safety_goals)
         if fsrs:
+            log.info(f"✅ Parsed {len(fsrs)} FSRs from structured text")
             return fsrs
         
-        # Fallback to structured text format
-        fsrs = self._parse_fsrs_from_text(llm_response, safety_goals)
+        # Strategy 2: Markdown table format (legacy)
+        log.info("Trying table format parser")
+        fsrs = self._parse_fsrs_from_table(llm_response, safety_goals)
+        if fsrs:
+            log.info(f"✅ Parsed {len(fsrs)} FSRs from table format")
+            return fsrs
+        
+        # Strategy 3: Regex extraction (aggressive)
+        log.info("Trying regex extraction parser")
+        fsrs = self._parse_fsrs_with_regex(llm_response, safety_goals)
+        if fsrs:
+            log.info(f"✅ Parsed {len(fsrs)} FSRs with regex")
+            return fsrs
+        
+        log.error("❌ All parsing strategies failed")
+        return []
+    
+    def _parse_fsrs_from_structured_text(self, response: str,
+                                        safety_goals: List[SafetyGoal]) -> List[FunctionalSafetyRequirement]:
+        """Parse FSRs from structured text format."""
+        
+        fsrs = []
+        lines = response.strip().split('\n')
+        current_fsr = {}
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Skip empty lines and code block markers
+            if not line or line in ['```', '---']:
+                if line == '---' and current_fsr and 'fsr_id' in current_fsr:
+                    # FSR block ended
+                    fsr = self._create_fsr_from_dict(current_fsr, safety_goals)
+                    if fsr:
+                        fsrs.append(fsr)
+                        log.info(f"Parsed FSR: {fsr.id}")
+                    current_fsr = {}
+                continue
+            
+            # Parse "Field: Value" format
+            if ':' in line and not line.startswith('#'):
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    field = parts[0].strip().lower().replace('-', '_').replace(' ', '_')
+                    value = parts[1].strip()
+                    
+                    # Map field names
+                    if 'fsr' in field and 'id' in field:
+                        current_fsr['fsr_id'] = value
+                    elif 'description' in field:
+                        current_fsr['description'] = value
+                    elif 'category' in field:
+                        current_fsr['category'] = value
+                    elif 'asil' in field:
+                        current_fsr['asil'] = value.upper()
+                    elif 'safety' in field and 'goal' in field:
+                        current_fsr['safety_goal_id'] = value
+                    elif 'allocation' in field or 'allocated' in field:
+                        current_fsr['allocated_to'] = value
+                    elif 'verification' in field:
+                        current_fsr['verification'] = value
+                    elif 'ftti' in field or 'timing' in field:
+                        current_fsr['timing'] = value
+        
+        # Save last FSR if exists
+        if current_fsr and 'fsr_id' in current_fsr:
+            fsr = self._create_fsr_from_dict(current_fsr, safety_goals)
+            if fsr:
+                fsrs.append(fsr)
+                log.info(f"Parsed FSR: {fsr.id}")
+        
+        return fsrs
+    
+    def _parse_fsrs_with_regex(self, response: str,
+                               safety_goals: List[SafetyGoal]) -> List[FunctionalSafetyRequirement]:
+        """Aggressive regex-based extraction as last resort."""
+        
+        fsrs = []
+        
+        # Find all FSR IDs in the text
+        fsr_id_pattern = r'FSR-SG-\d+-[A-Z]{3}-\d+'
+        fsr_ids = re.findall(fsr_id_pattern, response)
+        
+        log.info(f"Found {len(fsr_ids)} FSR IDs with regex: {fsr_ids}")
+        
+        for fsr_id in fsr_ids:
+            try:
+                # Extract safety goal ID
+                sg_match = re.search(r'SG-(\d+)', fsr_id)
+                if not sg_match:
+                    continue
+                
+                sg_number = sg_match.group(1)
+                parent_sg = None
+                
+                # Find parent safety goal
+                for sg_id_variant in [f"SG-{sg_number}", f"SG-{int(sg_number)}"]:
+                    parent_sg = next((g for g in safety_goals if g.id == sg_id_variant), None)
+                    if parent_sg:
+                        break
+                
+                if not parent_sg:
+                    log.warning(f"No parent safety goal for {fsr_id}")
+                    continue
+                
+                # Try to find description near the FSR ID
+                # Look for text between this FSR ID and the next one
+                fsr_index = response.find(fsr_id)
+                next_fsr_index = len(response)
+                
+                for other_id in fsr_ids:
+                    if other_id != fsr_id:
+                        other_index = response.find(other_id, fsr_index + 1)
+                        if other_index > fsr_index and other_index < next_fsr_index:
+                            next_fsr_index = other_index
+                
+                fsr_section = response[fsr_index:next_fsr_index]
+                
+                # Extract description (first meaningful line after FSR ID)
+                lines = fsr_section.split('\n')
+                description = "Functional safety requirement"
+                
+                for line in lines[1:10]:  # Check next few lines
+                    line = line.strip()
+                    if line and len(line) > 20 and not line.startswith('FSR-') and ':' not in line[:20]:
+                        description = line
+                        break
+                    elif 'Description:' in line:
+                        description = line.split('Description:', 1)[1].strip()
+                        break
+                
+                # Determine FSR type from ID
+                fsr_type = self._determine_fsr_type(fsr_id)
+                
+                # Create FSR
+                fsr = FunctionalSafetyRequirement(
+                    id=fsr_id,
+                    safety_goal_id=parent_sg.id,
+                    safety_goal=parent_sg.description,
+                    description=description,
+                    asil=parent_sg.asil,
+                    type=fsr_type,
+                    operating_modes=DEFAULT_OPERATING_MODES,
+                    timing=parent_sg.ftti,
+                    safe_state=parent_sg.safe_state,
+                    allocated_to='TBD',
+                    verification_criteria='Requirements-based test',
+                    emergency_operation='',
+                    functional_redundancy=''
+                )
+                
+                fsrs.append(fsr)
+                log.info(f"Regex extracted FSR: {fsr_id}")
+                
+            except Exception as e:
+                log.error(f"Error creating FSR from regex for {fsr_id}: {e}")
+                continue
         
         return fsrs
     
     def _parse_fsrs_from_table(self, response: str, 
                                safety_goals: List[SafetyGoal]) -> List[FunctionalSafetyRequirement]:
-        """
-        Parse FSRs from markdown table format.
+        """Parse FSRs from markdown table format."""
         
-        Expected format:
-        | FSR ID | Description | Allocation | ASIL | Linked SG | Verification | FTTI |
-        """
         fsrs = []
         lines = response.strip().split('\n')
         
         # Find table header
         header_idx = None
         for i, line in enumerate(lines):
-            if '| FSR ID |' in line or '|FSR ID|' in line or 'FSR ID' in line:
+            normalized = line.lower().replace(' ', '')
+            if 'fsrid' in normalized or 'fsr-id' in normalized:
                 header_idx = i
                 break
         
@@ -201,45 +329,44 @@ class FSRGenerator:
         for i in range(header_idx + 2, len(lines)):
             line = lines[i].strip()
             
-            if not line or not line.startswith('|'):
+            if not line or not '|' in line:
                 continue
             
-            # Parse cells
             cells = [cell.strip() for cell in line.split('|')]
-            cells = [c for c in cells if c]  # Remove empty
+            cells = [c for c in cells if c]
             
-            if len(cells) < 5:
+            if len(cells) < 4:
                 continue
             
             try:
                 fsr_id = cells[0]
-                description = cells[1]
-                allocation = cells[2] if len(cells) > 2 else 'TBD'
-                asil = cells[3] if len(cells) > 3 else 'Unknown'
-                linked_sg = cells[4] if len(cells) > 4 else 'Unknown'
-                verification = cells[5] if len(cells) > 5 else 'TBD'
-                timing = cells[6] if len(cells) > 6 else 'TBD'
                 
                 # Validate FSR ID format
-                if not re.search(r'FSR-\w+-\w+-\d+', fsr_id):
+                if not re.search(r'FSR-SG-\d+-[A-Z]{3}-\d+', fsr_id):
                     continue
                 
-                # Extract safety goal ID
-                sg_match = re.search(r'SG-\d+', fsr_id)
-                if sg_match:
-                    sg_id = sg_match.group(0)
-                else:
-                    sg_id = linked_sg
+                description = cells[1] if len(cells) > 1 else "Not specified"
+                allocation = cells[2] if len(cells) > 2 else "TBD"
+                asil = cells[3] if len(cells) > 3 else "QM"
                 
-                # Find parent safety goal
-                parent_sg = next((g for g in safety_goals if g.id == sg_id), None)
+                # Extract parent safety goal
+                sg_match = re.search(r'SG-(\d+)', fsr_id)
+                if not sg_match:
+                    continue
+                
+                sg_number = sg_match.group(1)
+                parent_sg = None
+                
+                for sg_id_variant in [f"SG-{sg_number}", f"SG-{int(sg_number)}"]:
+                    parent_sg = next((g for g in safety_goals if g.id == sg_id_variant), None)
+                    if parent_sg:
+                        break
+                
                 if not parent_sg:
                     continue
                 
-                # Determine FSR type
                 fsr_type = self._determine_fsr_type(fsr_id)
                 
-                # Create FSR object
                 fsr = FunctionalSafetyRequirement(
                     id=fsr_id,
                     safety_goal_id=parent_sg.id,
@@ -248,124 +375,105 @@ class FSRGenerator:
                     asil=asil.strip().upper(),
                     type=fsr_type,
                     operating_modes=DEFAULT_OPERATING_MODES,
-                    timing=timing if timing != 'N/A' else parent_sg.ftti,
+                    timing=parent_sg.ftti,
                     safe_state=parent_sg.safe_state,
                     allocated_to=allocation,
-                    verification_criteria=verification,
+                    verification_criteria='Requirements-based test',
                     emergency_operation='',
                     functional_redundancy=''
                 )
                 
                 fsrs.append(fsr)
+                log.info(f"Table parsed FSR: {fsr_id}")
                 
             except Exception as e:
-                print(f"Error parsing FSR from line {i}: {e}")
+                log.error(f"Error parsing table row {i}: {e}")
                 continue
         
         return fsrs
     
-    def _parse_fsrs_from_text(self, response: str,
-                             safety_goals: List[SafetyGoal]) -> List[FunctionalSafetyRequirement]:
-        """
-        Parse FSRs from structured text format.
+    def _create_fsr_from_dict(self, fsr_data: Dict, 
+                             safety_goals: List[SafetyGoal]) -> Optional[FunctionalSafetyRequirement]:
+        """Create FunctionalSafetyRequirement from parsed dictionary."""
         
-        Fallback parser for non-table format.
-        """
-        fsrs = []
-        lines = response.split('\n')
+        fsr_id = fsr_data.get('fsr_id', '')
         
-        current_fsr = {}
-        current_sg_id = None
-        
-        for line in lines:
-            line = line.strip()
-            
-            # Detect safety goal section
-            if line.startswith('## FSRs for') or line.startswith('### '):
-                sg_match = re.search(r'SG-\d+', line)
-                if sg_match:
-                    current_sg_id = sg_match.group(0)
-            
-            # Detect FSR ID
-            if line.startswith('**FSR-') and line.endswith('**'):
-                # Save previous FSR
-                if current_fsr and 'id' in current_fsr:
-                    fsr = self._finalize_fsr(current_fsr, safety_goals)
-                    if fsr:
-                        fsrs.append(fsr)
-                
-                # Start new FSR
-                fsr_id = line.replace('**', '').strip()
-                current_fsr = {
-                    'id': fsr_id,
-                    'safety_goal_id': current_sg_id or self._extract_sg_from_fsr_id(fsr_id)
-                }
-            
-            # Parse FSR fields
-            elif current_fsr:
-                if line.startswith('- **Description:**') or line.startswith('**Description:**'):
-                    current_fsr['description'] = re.sub(r'\*\*Description:\*\*\s*', '', line).replace('- ', '')
-                elif line.startswith('- **ASIL:**') or line.startswith('**ASIL:**'):
-                    current_fsr['asil'] = re.sub(r'\*\*ASIL:\*\*\s*', '', line).replace('- ', '')
-                elif 'Allocation' in line and (':**' in line):
-                    current_fsr['allocated_to'] = line.split(':**')[1].strip() if ':**' in line else 'TBD'
-                elif 'Verification' in line and (':**' in line):
-                    current_fsr['verification_criteria'] = line.split(':**')[1].strip() if ':**' in line else 'TBD'
-        
-        # Save last FSR
-        if current_fsr and 'id' in current_fsr:
-            fsr = self._finalize_fsr(current_fsr, safety_goals)
-            if fsr:
-                fsrs.append(fsr)
-        
-        return fsrs
-    
-    def _finalize_fsr(self, fsr_data: Dict, 
-                     safety_goals: List[SafetyGoal]) -> Optional[FunctionalSafetyRequirement]:
-        """
-        Convert parsed FSR dictionary to FunctionalSafetyRequirement object.
-        
-        Args:
-            fsr_data: Dictionary with parsed FSR data
-            safety_goals: List of safety goals
-            
-        Returns:
-            FunctionalSafetyRequirement object or None
-        """
-        sg_id = fsr_data.get('safety_goal_id')
-        parent_sg = next((sg for sg in safety_goals if sg.id == sg_id), None)
-        
-        if not parent_sg:
+        if not fsr_id:
             return None
         
-        fsr_type = self._determine_fsr_type(fsr_data.get('id', ''))
+        # Extract safety goal ID
+        sg_id = fsr_data.get('safety_goal_id')
+        
+        if not sg_id or not sg_id.startswith('SG-'):
+            # Try to extract from FSR ID
+            sg_match = re.search(r'SG-(\d+)', fsr_id)
+            if sg_match:
+                sg_number = sg_match.group(1)
+                for sg_id_variant in [f"SG-{sg_number}", f"SG-{int(sg_number)}"]:
+                    parent_sg = next((g for g in safety_goals if g.id == sg_id_variant), None)
+                    if parent_sg:
+                        sg_id = parent_sg.id
+                        break
+        
+        # Find parent safety goal
+        parent_sg = next((g for g in safety_goals if g.id == sg_id), None)
+        
+        if not parent_sg:
+            log.warning(f"No parent safety goal found for FSR {fsr_id}")
+            return None
+        
+        # Determine FSR type
+        fsr_type = self._map_category_to_type(fsr_data.get('category', ''))
+        if not fsr_type:
+            fsr_type = self._determine_fsr_type(fsr_id)
         
         return FunctionalSafetyRequirement(
-            id=fsr_data.get('id', 'Unknown'),
-            safety_goal_id=sg_id,
+            id=fsr_id,
+            safety_goal_id=parent_sg.id,
             safety_goal=parent_sg.description,
             description=fsr_data.get('description', 'Not specified'),
             asil=fsr_data.get('asil', parent_sg.asil),
             type=fsr_type,
             operating_modes=DEFAULT_OPERATING_MODES,
-            timing=parent_sg.ftti,
+            timing=fsr_data.get('timing', parent_sg.ftti),
             safe_state=parent_sg.safe_state,
             allocated_to=fsr_data.get('allocated_to', 'TBD'),
-            verification_criteria=fsr_data.get('verification_criteria', 'TBD'),
+            verification_criteria=fsr_data.get('verification', 'Requirements-based test'),
             emergency_operation='',
             functional_redundancy=''
         )
     
-    def _determine_fsr_type(self, fsr_id: str) -> str:
-        """
-        Determine FSR type from ID.
+    def _map_category_to_type(self, category: str) -> str:
+        """Map category name to FSR type."""
         
-        Args:
-            fsr_id: FSR identifier
-            
-        Returns:
-            FSR type name
-        """
+        category_lower = category.lower()
+        
+        mapping = {
+            'detection': 'Fault Detection',
+            'detect': 'Fault Detection',
+            'control': 'Fault Control',
+            'warning': 'Warning/Indication',
+            'warn': 'Warning/Indication',
+            'indication': 'Warning/Indication',
+            'avoidance': 'Fault Avoidance',
+            'avoid': 'Fault Avoidance',
+            'safe state': 'Safe State Transition',
+            'transition': 'Safe State Transition',
+            'tolerance': 'Fault Tolerance',
+            'tolerate': 'Fault Tolerance',
+            'timing': 'Timing',
+            'arbitration': 'Arbitration'
+        }
+        
+        for key, value in mapping.items():
+            if key in category_lower:
+                return value
+        
+        return ''
+    
+    def _determine_fsr_type(self, fsr_id: str) -> str:
+        """Determine FSR type from ID."""
+        
         type_mapping = {
             'AVD': 'Fault Avoidance',
             'DET': 'Fault Detection',
@@ -374,7 +482,13 @@ class FSRGenerator:
             'TOL': 'Fault Tolerance',
             'WRN': 'Warning/Indication',
             'TIM': 'Timing',
-            'ARB': 'Arbitration'
+            'ARB': 'Arbitration',
+            'REA': 'Fault Reaction',
+            'IND': 'Fault Indication',
+            'MOD': 'Operating Mode',
+            'RED': 'Functional Redundancy',
+            'SEQ': 'Sequence Control',
+            'INT': 'Interface'
         }
         
         for code, name in type_mapping.items():
@@ -382,108 +496,3 @@ class FSRGenerator:
                 return name
         
         return 'General'
-    
-    def _extract_sg_from_fsr_id(self, fsr_id: str) -> str:
-        """
-        Extract safety goal ID from FSR ID.
-        
-        Args:
-            fsr_id: FSR identifier
-            
-        Returns:
-            Safety goal ID or 'Unknown'
-        """
-        match = re.search(r'SG-\d+', fsr_id)
-        return match.group(0) if match else 'Unknown'
-
-
-class FSRFormatter:
-    """Helper class for formatting FSR output"""
-    
-    @staticmethod
-    def format_fsr_summary(fsrs: List[FunctionalSafetyRequirement],
-                          safety_goals: List[SafetyGoal],
-                          system_name: str) -> str:
-        """
-        Format FSRs into a readable summary.
-        
-        Args:
-            fsrs: List of FSR objects
-            safety_goals: List of SafetyGoal objects
-            system_name: System name
-            
-        Returns:
-            Formatted summary string
-        """
-        if not fsrs:
-            return "No FSRs generated."
-        
-        summary = f"# Functional Safety Requirements\n\n"
-        summary += f"**System:** {system_name}\n"
-        summary += f"**Total FSRs:** {len(fsrs)}\n\n"
-        
-        # FSR statistics
-        asil_counts = {}
-        type_counts = {}
-        
-        for fsr in fsrs:
-            asil_counts[fsr.asil] = asil_counts.get(fsr.asil, 0) + 1
-            type_counts[fsr.type] = type_counts.get(fsr.type, 0) + 1
-        
-        summary += "**ASIL Distribution:**\n"
-        for asil in ['D', 'C', 'B', 'A']:
-            if asil in asil_counts:
-                summary += f"- ASIL {asil}: {asil_counts[asil]} FSRs\n"
-        
-        summary += "\n**FSR Types:**\n"
-        for fsr_type, count in sorted(type_counts.items()):
-            summary += f"- {fsr_type}: {count} FSRs\n"
-        
-        summary += "\n---\n\n"
-        
-        # Group FSRs by safety goal
-        for goal in safety_goals:
-            goal_fsrs = [f for f in fsrs if f.safety_goal_id == goal.id]
-            
-            if not goal_fsrs:
-                continue
-            
-            summary += f"## {goal.id}: {goal.description}\n\n"
-            summary += f"**ASIL:** {goal.asil}\n"
-            summary += f"**FSRs:** {len(goal_fsrs)}\n\n"
-            
-            for fsr in goal_fsrs:
-                summary += f"### {fsr.id}\n"
-                summary += f"**Type:** {fsr.type}\n"
-                summary += f"**Description:** {fsr.description}\n"
-                summary += f"**ASIL:** {fsr.asil}\n"
-                summary += f"**Allocated To:** {fsr.allocated_to}\n"
-                summary += f"**Verification:** {fsr.verification_criteria}\n"
-                summary += f"**Timing:** {fsr.timing}\n\n"
-            
-            summary += "---\n\n"
-        
-        return summary
-    
-    @staticmethod
-    def format_fsr_table(fsrs: List[FunctionalSafetyRequirement]) -> str:
-        """
-        Format FSRs as markdown table.
-        
-        Args:
-            fsrs: List of FSR objects
-            
-        Returns:
-            Markdown table string
-        """
-        table = "| FSR ID | Description | Type | ASIL | Allocated To | Verification |\n"
-        table += "|--------|-------------|------|------|--------------|-------------|\n"
-        
-        for fsr in fsrs:
-            desc = fsr.description[:60] + "..." if len(fsr.description) > 60 else fsr.description
-            alloc = fsr.allocated_to[:30] + "..." if len(fsr.allocated_to) > 30 else fsr.allocated_to
-            verif = fsr.verification_criteria[:40] + "..." if len(fsr.verification_criteria) > 40 else fsr.verification_criteria
-            
-            table += f"| {fsr.id} | {desc} | {fsr.type} | {fsr.asil} | {alloc} | {verif} |\n"
-        
-        return table

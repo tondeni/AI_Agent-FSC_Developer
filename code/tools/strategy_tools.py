@@ -26,20 +26,7 @@ from core.validators import StrategyValidator
 )
 def develop_safety_strategy(tool_input, cat):
     """
-    Develop safety strategies for safety goals.
-    
-    Per ISO 26262-3:2018, Clause 7.4.2.3:
-    Strategies shall be specified for:
-    a) Fault avoidance
-    b) Fault detection and control
-    c) Transitioning to/from safe state
-    d) Fault tolerance
-    e) Degradation of functionality
-    f) Driver warnings (exposure reduction)
-    g) Driver warnings (controllability)
-    h) Timing requirements (FTTI)
-    i) Arbitration of conflicting control requests
-    
+    Develop safety strategies for safety goals.    
     Input: "develop safety strategy for all goals" or "develop safety strategy for SG-XXX"
     """
     
@@ -130,30 +117,25 @@ def develop_safety_strategy(tool_input, cat):
             output += "\n\n---\n\n"
             output += f"⚠️ **Validation Warnings:**\n{validation_result.format_report()}\n"
         
-        # Add next steps
-        output += f"""
-
----
-
-**Completed:**
-- ✅ Step 1: Safety Goals extracted from HARA
-- ✅ Step 2: Safety Strategies developed ({len(strategies)} goals × 9 strategies)
-
-**Next Steps per ISO 26262-3:2018:**
-
-➡️ **Step 3:** Derive Functional Safety Requirements (Clause 7.4.2.1)
-   ```
-   derive FSRs for all goals
-   ```
-
-➡️ **Step 4:** Allocate FSRs to system architecture
-   ```
-   allocate all FSRs
-   ```
-"""
-        
-        log.info(f"✅ Strategies generated: {len(strategies)} safety goals")
-        
+        # # Add next steps
+        # workflow_section = """***ISO 26262-3:2018 - Functional Safety Concept Development Workflow***"""
+    
+        # completed__workflow_content ="""| Step | Phase | ISO 26262:3 clause | Status |
+        # |------|-------|------------------|--------------|
+        # | ✅ | Identify Safety Goals | 7.3.1 | Safety Goals extracted from HARA |
+        # | ✅ | Develop Safety Strategy | 7.4.2.3 | Safety Strategies developed |"""
+      
+        # # # Add workflow next steps
+        # pending_workflow_content = """| Step | Phase | ISO 26262:3 clause | Tool Command |
+        # |------|-------|------------------|--------------|
+        # | 3 | Derive Functional Safety Requirements | 7.4.2.2 | `derive FSRs for all goals` |
+        # | 4 | Allocate FSRs to system architecture | 7.4.2.8 | `allocate all FSRs` |
+        # | 5 | Specify Validation Criteria | 7.4.3 | `specify validation criteria` |
+        # | 6 | Verify FSC | 7.4.4 | `verify FSC` |
+        # | 7 | Generate FSC Document | 7.5 | `generate FSC document` |"""
+       
+        # log.info(f"✅ Strategies generated: {len(strategies)} safety goals")
+        # output += workflow_section + "\n " + completed__workflow_content + "\n **Next Steps** \n" + pending_workflow_content
         return output
         
     except Exception as e:

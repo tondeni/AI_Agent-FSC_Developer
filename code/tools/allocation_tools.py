@@ -1,317 +1,403 @@
-# tools/allocation_tools.py
-# FSR allocation tools
+# ==============================================================================
+# tools/allocation_tools.py (REFINED VERSION)
+# Tools for FSR allocation following FSR tool pattern
+# ==============================================================================
 
 from cat.mad_hatter.decorators import tool
 from cat.log import log
+from datetime import datetime
 import sys
 import os
 
-# Add parent directory to path
-plugin_folder = os.path.dirname(os.path.dirname(__file__))
+plugin_folder = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(plugin_folder)
 
 from generators.allocation_generator import AllocationGenerator, AllocationAnalyzer
-from core.models import SafetyGoal, FunctionalSafetyRequirement
+from core.models import FunctionalSafetyRequirement, SafetyGoal
 
 
 @tool(
-    return_direct=True,
+    return_direct=False,
     examples=[
         "allocate all FSRs",
-        "allocate FSR-SG-001-DET-1 to Voltage Monitor Hardware",
-        "allocate functional requirements"
+        "allocate functional safety requirements",
+        "allocate FSRs to architecture"
     ]
 )
 def allocate_functional_requirements(tool_input, cat):
     """
-    Allocate Functional Safety Requirements to system components.
+    Allocate Functional Safety Requirements to architectural elements.
     
-    Per ISO 26262-3:2018, Clause 7.4.2.8:
-    - Allocate FSRs to architectural elements
-    - Define interfaces between components
-    - Document allocation rationale
-    - Maintain ASIL integrity
+    Per ISO 26262-3:2018, Clause 7.4.2.8.
+    Assigns each FSR to specific system components.
     
-    Input: "allocate all FSRs" or "allocate FSR-XXX to [component]"
+    Input: "all" to allocate all FSRs
     """
     
     log.info("✅ TOOL CALLED: allocate_functional_requirements")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
-    safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
+    goals_data = cat.working_memory.get("fsc_safety_goals", [])
+    system_name = cat.working_memory.get("system_name", "the system")
     
     if not fsrs_data:
-        return """❌ No FSRs available.
-
-**Required Steps:**
-1. Load HARA: `load HARA for [item name]`
-2. Develop strategy: `develop safety strategy for all goals`
-3. Derive FSRs: `derive FSRs for all goals`
-4. Allocate FSRs: `allocate all FSRs`
-"""
+        return "No FSRs available to allocate. Please derive FSRs first using: derive FSRs for all goals"
     
-    input_str = str(tool_input).strip().lower()
-    
-    # Check if single FSR allocation
-    if ' to ' in input_str:
-        return _allocate_single_fsr(tool_input, cat, fsrs_data)
-    
-    # Batch allocation for all FSRs
-    system_name = cat.working_memory.get("system_name", "the system")
-    safety_goals = [SafetyGoal(**g) for g in safety_goals_data]
+    # Convert to objects
     fsrs = [FunctionalSafetyRequirement(**f) for f in fsrs_data]
+    goals = [SafetyGoal(**g) for g in goals_data] if goals_data else []
     
-    log.info(f"🎯 Allocating {len(fsrs)} FSRs to system components")
+    log.info(f"📋 Allocating {len(fsrs)} FSRs to architectural elements")
     
     try:
-        # Initialize allocation generator
+        # Use generator for allocation logic
         generator = AllocationGenerator(cat.llm)
-        
-        # Allocate FSRs
-        log.info("🔄 Allocating FSRs...")
-        allocated_fsrs = generator.allocate_fsrs(fsrs, safety_goals, system_name)
+        allocated_fsrs = generator.allocate_fsrs(fsrs, goals, system_name)
         
         # Store updated FSRs
-        cat.working_memory["fsc_functional_requirements"] = [fsr.to_dict() for fsr in allocated_fsrs]
-        cat.working_memory["fsc_stage"] = "fsrs_allocated"
+        cat.working_memory["fsc_functional_requirements"] = [f.to_dict() for f in allocated_fsrs]
+        cat.working_memory["last_operation"] = "fsr_allocation"
+        cat.working_memory["operation_timestamp"] = datetime.now().isoformat()
         
         # Get allocation statistics
-        analyzer = AllocationAnalyzer()
-        stats = analyzer.get_allocation_statistics(allocated_fsrs)
+        stats = AllocationAnalyzer.get_allocation_statistics(allocated_fsrs)
         
-        # Generate summary
-        summary = f"""✅ **FSRs Allocated to System Components**
+        # Simple output - let agent format details
+        output = f"""✅ Successfully allocated {stats['allocated']} of {stats['total']} FSRs
 
 **System:** {system_name}
-**Total FSRs:** {stats['total_fsrs']}
-**FSRs Allocated:** {stats['allocated']}
 
-**Allocation by Component Type:**
+**Allocation Distribution:**
+- Hardware Components: {stats['by_component_type'].get('Hardware', 0)} FSRs
+- Software Components: {stats['by_component_type'].get('Software', 0)} FSRs
+- External Systems: {stats['by_component_type'].get('External', 0)} FSRs
+- Mechanical Elements: {stats['by_component_type'].get('Mechanical', 0)} FSRs
+
+**Components Allocated To:** {len(stats['by_component'])}
+
+**ASIL Distribution:**
 """
         
-        for comp_type, count in sorted(stats['by_component_type'].items()):
-            summary += f"- {comp_type}: {count} FSRs\n"
-        
-        summary += "\n**Allocation by ASIL:**\n"
-        
-        for asil in ['D', 'C', 'B', 'A']:
+        for asil in ['D', 'C', 'B', 'A', 'QM']:
             if asil in stats['by_asil']:
-                summary += f"- ASIL {asil}: {stats['by_asil'][asil]} FSRs\n"
+                output += f"- ASIL {asil}: {stats['by_asil'][asil]} FSRs\n"
         
-        summary += "\n---\n\n"
+        if stats['unallocated'] > 0:
+            output += f"\n⚠️ {stats['unallocated']} FSRs still need allocation\n"
         
-        # Add allocation matrix
-        summary += analyzer.format_allocation_matrix(allocated_fsrs)
+        output += "\n**Next Steps:**"
+        output += "\n- View allocation: `show allocation summary`"
+        output += "\n- Specify validation: `specify validation criteria`"
         
-        summary += "\n---\n\n"
+        log.info(f"✅ Allocation complete: {stats['allocated']}/{stats['total']} FSRs allocated")
         
-        # Validate allocation
-        is_valid, issues = analyzer.validate_allocation(allocated_fsrs)
+        return output
         
-        if not is_valid:
-            summary += "⚠️ **Allocation Issues:**\n"
-            for issue in issues:
-                summary += f"- {issue}\n"
-            summary += "\n"
-        
-        summary += """**ISO 26262-3:2018 Compliance:**
-✅ Clause 7.4.2.8: FSR allocation to architectural elements
-✅ Allocation rationale documented
-✅ Interfaces identified
+    except Exception as e:
+        log.error(f"❌ Error allocating FSRs: {e}")
+        import traceback
+        log.error(traceback.format_exc())
+        return f"Error during allocation: {str(e)}\n\nPlease check the logs for details."
 
-**Completed:**
-- ✅ Step 1: Safety Goals extracted from HARA
-- ✅ Step 2: Safety Strategies developed
-- ✅ Step 3: Functional Safety Requirements derived
-- ✅ Step 4: FSRs allocated to architecture
 
-**Next Steps:**
+@tool(
+    return_direct=False,
+    examples=[
+        "show allocation summary",
+        "show allocation matrix",
+        "show FSR allocation"
+    ]
+)
+def show_allocation_summary(tool_input, cat):
+    """
+    Show allocation summary with FSRs grouped by component.
+    Displays allocation matrix per ISO 26262-3:2018, Clause 7.4.2.8.
+    """
+    
+    log.info("✅ TOOL CALLED: show_allocation_summary")
+    
+    fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
+    system_name = cat.working_memory.get("system_name", "the system")
+    
+    if not fsrs_data:
+        return "No FSRs available. Please derive FSRs first using: derive FSRs for all goals"
+    
+    # Convert to objects for analysis
+    fsrs = [FunctionalSafetyRequirement(**f) for f in fsrs_data]
+    
+    # Get statistics
+    stats = AllocationAnalyzer.get_allocation_statistics(fsrs)
+    
+    # Build summary
+    output = f"""📊 **FSR Allocation Summary for {system_name}**
 
-➡️ **Step 5:** Specify Validation Criteria
-   ```
-   specify validation criteria
-   ```
-
-➡️ **Step 6:** Verify FSC
-   ```
-   verify FSC
-   ```
-
-➡️ **Step 7:** Generate FSC Document
-   ```
-   generate FSC document
-   ```
+**Total FSRs:** {stats['total']}
+**Allocated:** {stats['allocated']} ({stats['allocated']*100//stats['total'] if stats['total'] > 0 else 0}%)
+**Unallocated:** {stats['unallocated']}
 
 ---
 
-**Review Allocation:**
-- View specific: `show allocation for [component name]`
-- View all: `show allocation summary`
-- Modify: `allocate [FSR-ID] to [component name]`
+## Allocation by Component Type
+
 """
-        
-        log.info(f"✅ Allocation complete: {stats['allocated']}/{stats['total_fsrs']} FSRs")
-        
-        return summary
-        
-    except Exception as e:
-        log.error(f"Error allocating FSRs: {e}")
-        import traceback
-        log.error(traceback.format_exc())
-        return f"❌ Error allocating FSRs: {str(e)}"
+    
+    for comp_type, count in sorted(stats['by_component_type'].items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / stats['allocated'] * 100) if stats['allocated'] > 0 else 0
+        output += f"**{comp_type}:** {count} FSRs ({percentage:.1f}%)\n"
+    
+    output += "\n---\n\n## Allocation by Component\n\n"
+    
+    # Show top components
+    sorted_components = sorted(stats['by_component'].items(), 
+                               key=lambda x: x[1]['count'], 
+                               reverse=True)
+    
+    for component, info in sorted_components[:10]:  # Show top 10
+        asil_str = ', '.join(sorted(info['asil_levels'], reverse=True))
+        output += f"### {component}\n"
+        output += f"- FSRs: {info['count']}\n"
+        output += f"- ASIL Levels: {asil_str}\n"
+        output += f"- FSR IDs: {', '.join(info['fsr_ids'][:3])}"
+        if len(info['fsr_ids']) > 3:
+            output += f" ... (+{len(info['fsr_ids']) - 3} more)"
+        output += "\n\n"
+    
+    if len(sorted_components) > 10:
+        output += f"*... and {len(sorted_components) - 10} more components*\n\n"
+    
+    output += "---\n\n## ASIL Distribution\n\n"
+    
+    for asil in ['D', 'C', 'B', 'A', 'QM']:
+        if asil in stats['by_asil']:
+            output += f"- ASIL {asil}: {stats['by_asil'][asil]} FSRs\n"
+    
+    output += "\n**Commands:**"
+    output += "\n- View specific FSR: `show FSR FSR-SG-001-DET-1`"
+    output += "\n- Manually allocate: `allocate FSR-001 to Component Name`"
+    
+    log.info(f"📊 Showed allocation summary: {stats['allocated']}/{stats['total']} allocated")
+    
+    return output
 
 
-@tool(return_direct=True)
-def show_allocation_summary(tool_input, cat):
+@tool(
+    return_direct=False,
+    examples=[
+        "show allocation matrix",
+        "generate allocation matrix",
+        "allocation matrix table"
+    ]
+)
+def show_allocation_matrix(tool_input, cat):
     """
-    Show allocation summary and matrix.
+    Generate detailed allocation matrix table.
+    Shows traceability from Safety Goals → FSRs → Components.
     
-    Displays FSRs grouped by allocated component.
-    
-    Input: "show allocation summary"
+    Per ISO 26262-3:2018, Clause 7.4.2.8 and traceability requirements.
     """
+    
+    log.info("✅ TOOL CALLED: show_allocation_matrix")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
+    system_name = cat.working_memory.get("system_name", "the system")
     
     if not fsrs_data:
-        return "❌ No FSRs available."
+        return "No FSRs available. Please derive and allocate FSRs first."
     
     # Convert to objects
     fsrs = [FunctionalSafetyRequirement(**f) for f in fsrs_data]
     
-    allocated_fsrs = [f for f in fsrs if f.is_allocated()]
+    # Use analyzer to format matrix
+    matrix = AllocationAnalyzer.format_allocation_matrix(fsrs)
     
-    if not allocated_fsrs:
-        return "❌ No FSRs allocated yet. Use: `allocate all FSRs`"
+    # Add header
+    output = f"""# FSR Allocation Matrix
+**System:** {system_name}
+**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+*ISO 26262-3:2018, Clause 7.4.2.8 - FSR Allocation to Architectural Elements*
+
+---
+
+{matrix}
+
+---
+
+## Allocation Validation
+
+"""
     
-    # Use analyzer to format
-    analyzer = AllocationAnalyzer()
-    matrix = analyzer.format_allocation_matrix(fsrs)
+    # Validate allocation
+    is_valid, issues = AllocationAnalyzer.validate_allocation(fsrs)
     
-    return matrix
+    if is_valid:
+        output += "✅ **Allocation Status:** Complete and valid\n"
+    else:
+        output += "⚠️ **Allocation Issues Found:**\n\n"
+        for issue in issues:
+            output += f"- {issue}\n"
+    
+    output += "\n**Next Steps:**"
+    output += "\n- Specify validation criteria: `specify validation criteria`"
+    output += "\n- Verify FSC: `verify FSC`"
+    
+    return output
 
 
-@tool(return_direct=True)
-def show_allocation_for_component(tool_input, cat):
+@tool(
+    return_direct=False,
+    examples=[
+        "allocate FSR-SG-001-DET-1 to Battery Monitor",
+        "allocate FSR-001 to Safety Controller",
+        "manually allocate FSR-002 to Voltage Sensor"
+    ]
+)
+def allocate_single_fsr(tool_input, cat):
     """
-    Show FSRs allocated to a specific component.
+    Manually allocate a specific FSR to a component.
     
-    Input: Component name
-    Example: "show allocation for Voltage Monitor Hardware"
+    Input: "FSR-ID to Component Name"
+    Example: "FSR-SG-001-DET-1 to Battery Monitor"
     """
+    
+    log.info(f"✅ TOOL CALLED: allocate_single_fsr with input: {tool_input}")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
     
     if not fsrs_data:
-        return "❌ No FSRs available."
+        return "No FSRs available. Please derive FSRs first using: derive FSRs for all goals"
     
     # Parse input
-    component_name = str(tool_input).strip()
-    component_name = component_name.replace("show allocation for", "").replace("allocation for", "").strip()
+    input_str = str(tool_input).upper()
     
-    # Find FSRs for this component
-    component_fsrs = [f for f in fsrs_data if component_name.lower() in f.get('allocated_to', '').lower()]
+    if " TO " not in input_str:
+        return "Invalid format. Use: 'FSR-ID to Component Name'\n\nExample: allocate FSR-SG-001-DET-1 to Battery Monitor"
     
-    if not component_fsrs:
-        return f"""❌ No FSRs allocated to component matching '{component_name}'.
-
-**Tip:** Use `show allocation summary` to see all components.
-"""
+    parts = input_str.split(" TO ")
+    fsr_id = parts[0].strip()
+    component = parts[1].strip().title()
     
-    summary = f"""# 📦 Allocation for Component
-
-**Component:** {component_fsrs[0]['allocated_to']}
-**Component Type:** {component_fsrs[0].get('allocation_type', 'Unknown')}
-**FSRs Allocated:** {len(component_fsrs)}
-
----
-
-## Allocated FSRs
-
-"""
+    # Clean up FSR ID
+    fsr_id = fsr_id.replace("ALLOCATE", "").replace("FSR", "").strip()
+    if not fsr_id.startswith("FSR-"):
+        fsr_id = "FSR-" + fsr_id
     
-    # Group by ASIL
-    asil_groups = {}
-    for fsr in component_fsrs:
-        asil = fsr.get('asil', 'Unknown')
-        if asil not in asil_groups:
-            asil_groups[asil] = []
-        asil_groups[asil].append(fsr)
-    
-    for asil in ['D', 'C', 'B', 'A']:
-        if asil in asil_groups:
-            summary += f"\n### ASIL {asil} ({len(asil_groups[asil])} FSRs)\n\n"
-            
-            for fsr in asil_groups[asil]:
-                summary += f"**{fsr['id']}** - {fsr.get('type', 'Unknown')}\n"
-                summary += f"- {fsr.get('description', 'N/A')}\n"
-                summary += f"- Linked to: {fsr.get('safety_goal_id', 'Unknown')}\n"
-                summary += f"- Interface: {fsr.get('interface', 'To be specified')}\n\n"
-    
-    return summary
-
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-def _allocate_single_fsr(tool_input, cat, fsrs_data):
-    """Allocate a single FSR to a component (manual allocation)"""
-    
-    input_str = str(tool_input).strip()
-    
-    # Parse FSR ID and component
-    if ' to ' not in input_str.lower():
-        return """❌ Please specify allocation target.
-
-**Format:** `allocate [FSR-ID] to [component]`
-**Example:** `allocate FSR-SG-001-DET-1 to Voltage Monitoring Hardware`
-"""
-    
-    parts = input_str.split(' to ', 1)
-    fsr_id_part = parts[0].replace('allocate', '').replace('fsr', '').strip().upper()
-    component = parts[1].strip()
-    
-    # Find FSR ID in the text
-    fsr_id = None
-    for fsr in fsrs_data:
-        if fsr['id'].upper() in fsr_id_part or fsr_id_part in fsr['id'].upper():
-            fsr_id = fsr['id']
-            break
-    
-    if not fsr_id:
-        available = ', '.join([f['id'] for f in fsrs_data[:5]])
-        return f"❌ FSR not found in '{fsr_id_part}'. Available: {available}..."
-    
-    # Find and update the FSR
+    # Find FSR
     fsr_data = next((f for f in fsrs_data if f['id'] == fsr_id), None)
     
-    # Convert to object for allocation
+    if not fsr_data:
+        available_ids = [f['id'] for f in fsrs_data[:5]]
+        return f"FSR '{fsr_id}' not found.\n\nAvailable FSRs: {', '.join(available_ids)}{'...' if len(fsrs_data) > 5 else ''}"
+    
+    # Create FSR object for allocation
     fsr = FunctionalSafetyRequirement(**fsr_data)
     
-    # Use generator for single allocation
+    # Use generator for proper allocation
     generator = AllocationGenerator(cat.llm)
-    updated_fsr = generator.allocate_single_fsr(fsr, component)
+    allocated_fsr = generator.allocate_single_fsr(fsr, component)
     
     # Update in working memory
     for i, f in enumerate(fsrs_data):
         if f['id'] == fsr_id:
-            fsrs_data[i] = updated_fsr.to_dict()
+            fsrs_data[i] = allocated_fsr.to_dict()
             break
     
     cat.working_memory["fsc_functional_requirements"] = fsrs_data
     
-    return f"""✅ **FSR Allocated**
+    # Build output
+    output = f"""✅ **FSR Allocated Successfully**
 
 **FSR:** {fsr_id}
-**Requirement:** {fsr_data.get('description', 'N/A')}
+**Description:** {fsr_data.get('description', 'Not specified')[:80]}...
 **ASIL:** {fsr_data.get('asil', 'QM')}
+**Type:** {fsr_data.get('type', 'Unknown')}
 
 **Allocated To:** {component}
-**Type:** {updated_fsr.allocation_type}
+**Component Type:** {allocated_fsr.allocation_type}
+**Rationale:** {allocated_fsr.allocation_rationale}
 
-**Next Steps:**
-- Continue allocating: `allocate [next FSR-ID] to [component]`
-- Or batch allocate: `allocate all FSRs`
-- Generate document: `generate FSC document`
+---
+
+**Allocation Status:** Updated in working memory
+**View Summary:** `show allocation summary`
 """
+    
+    log.info(f"✅ Manual allocation: {fsr_id} → {component}")
+    
+    return output
+
+
+@tool(
+    return_direct=False,
+    examples=[
+        "list FSRs for Battery Monitor",
+        "show FSRs allocated to Safety Controller",
+        "what FSRs are allocated to Voltage Sensor"
+    ]
+)
+def list_fsrs_by_component(tool_input, cat):
+    """
+    List all FSRs allocated to a specific component.
+    
+    Input: Component name
+    Example: "list FSRs for Battery Monitor"
+    """
+    
+    log.info(f"✅ TOOL CALLED: list_fsrs_by_component with input: {tool_input}")
+    
+    fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
+    
+    if not fsrs_data:
+        return "No FSRs available. Please derive and allocate FSRs first."
+    
+    # Parse component name from input
+    component_name = str(tool_input).lower()
+    component_name = component_name.replace("list fsrs for", "").replace("fsrs for", "").replace("for", "").strip().title()
+    
+    # Find matching FSRs (case-insensitive partial match)
+    matching_fsrs = []
+    for fsr in fsrs_data:
+        allocated = fsr.get('allocated_to', '').lower()
+        if component_name.lower() in allocated or allocated in component_name.lower():
+            matching_fsrs.append(fsr)
+    
+    if not matching_fsrs:
+        return f"No FSRs found allocated to '{component_name}'.\n\nUse `show allocation summary` to see all components."
+    
+    # Build output
+    output = f"""📋 **FSRs Allocated to: {component_name}**
+
+**Total FSRs:** {len(matching_fsrs)}
+
+---
+
+"""
+    
+    # Group by ASIL
+    by_asil = {}
+    for fsr in matching_fsrs:
+        asil = fsr.get('asil', 'QM')
+        if asil not in by_asil:
+            by_asil[asil] = []
+        by_asil[asil].append(fsr)
+    
+    for asil in ['D', 'C', 'B', 'A', 'QM']:
+        if asil in by_asil:
+            output += f"## ASIL {asil} ({len(by_asil[asil])} FSRs)\n\n"
+            
+            for fsr in by_asil[asil]:
+                output += f"### {fsr['id']}\n"
+                output += f"**Type:** {fsr.get('type', 'Unknown')}\n"
+                output += f"**Description:** {fsr.get('description', 'Not specified')}\n"
+                output += f"**Safety Goal:** {fsr.get('safety_goal_id', 'Unknown')}\n"
+                if fsr.get('allocation_rationale'):
+                    output += f"**Rationale:** {fsr['allocation_rationale']}\n"
+                output += "\n"
+    
+    output += "---\n\n"
+    output += "**View Details:** `show FSR FSR-SG-XXX-YYY-Z`\n"
+    output += "**Allocation Summary:** `show allocation summary`\n"
+    
+    log.info(f"📋 Listed {len(matching_fsrs)} FSRs for component: {component_name}")
+    
+    return output
