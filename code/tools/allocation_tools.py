@@ -63,7 +63,7 @@ def allocate_functional_requirements(tool_input, cat):
         stats = AllocationAnalyzer.get_allocation_statistics(allocated_fsrs)
         
         # Simple output - let agent format details
-        output = f"""✅ Successfully allocated {stats['allocated']} of {stats['total']} FSRs
+        output = f"""✅ Successfully allocated {stats['allocated']} of {stats['total_fsrs']} FSRs
 
 **System:** {system_name}
 
@@ -89,7 +89,7 @@ def allocate_functional_requirements(tool_input, cat):
         output += "\n- View allocation: `show allocation summary`"
         output += "\n- Specify validation: `specify validation criteria`"
         
-        log.info(f"✅ Allocation complete: {stats['allocated']}/{stats['total']} FSRs allocated")
+        log.info(f"✅ Allocation complete: {stats['allocated']}/{stats['total_fsrs']} FSRs allocated")
         
         return output
         
@@ -305,24 +305,24 @@ def allocate_single_fsr(tool_input, cat):
     cat.working_memory["fsc_functional_requirements"] = fsrs_data
     
     # Build output
-    output = f"""✅ **FSR Allocated Successfully**
+    output = f"""✅ **FSR Allocated Successfully**"""
 
-**FSR:** {fsr_id}
-**Description:** {fsr_data.get('description', 'Not specified')[:80]}...
-**ASIL:** {fsr_data.get('asil', 'QM')}
-**Type:** {fsr_data.get('type', 'Unknown')}
+# **FSR:** {fsr_id}
+# **Description:** {fsr_data.get('description', 'Not specified')[:80]}...
+# **ASIL:** {fsr_data.get('asil', 'QM')}
+# **Type:** {fsr_data.get('type', 'Unknown')}
 
-**Allocated To:** {component}
-**Component Type:** {allocated_fsr.allocation_type}
-**Rationale:** {allocated_fsr.allocation_rationale}
+# **Allocated To:** {component}
+# **Component Type:** {allocated_fsr.allocation_type}
+# **Rationale:** {allocated_fsr.allocation_rationale}
 
----
+# ---
 
-**Allocation Status:** Updated in working memory
-**View Summary:** `show allocation summary`
-"""
+# **Allocation Status:** Updated in working memory
+# **View Summary:** `show allocation summary`
+# """
     
-    log.info(f"✅ Manual allocation: {fsr_id} → {component}")
+#     log.info(f"✅ Manual allocation: {fsr_id} → {component}")
     
     return output
 

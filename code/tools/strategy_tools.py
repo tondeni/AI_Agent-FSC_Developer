@@ -105,8 +105,8 @@ def develop_safety_strategy(tool_input, cat):
         existing_dict = {s['safety_goal_id']: s for s in existing_strategies}
         existing_dict.update(new_strategies_dict)
         
-        cat.working_memory["fsc_safety_strategies"] = list(existing_dict.values())
-        cat.working_memory["fsc_stage"] = "strategies_developed"
+        cat.working_memory.fsc_safety_strategies = list(existing_dict.values())
+        cat.working_memory.fsc_stage = "strategies_developed"
         
         # Format output
         formatter = StrategyFormatter()

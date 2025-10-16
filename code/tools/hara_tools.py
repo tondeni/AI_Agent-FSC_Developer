@@ -119,9 +119,9 @@ You can manually place your HARA file in:
 """
     
     # Store in working memory
-    cat.working_memory["system_name"] = hara_data.system
-    cat.working_memory["fsc_safety_goals"] = [goal.to_dict() for goal in hara_data.goals]
-    cat.working_memory["fsc_stage"] = "hara_loaded"
+    cat.working_memory.system_name = hara_data.system
+    cat.working_memory.fsc_safety_goals = [goal.to_dict() for goal in hara_data.goals]
+    cat.working_memory.fsc_stage = "hara_loaded"
     
     # Generate summary
     summary = _build_hara_summary(hara_data, validation_result)

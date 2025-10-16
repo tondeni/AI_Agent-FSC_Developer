@@ -1,31 +1,33 @@
-"""
-AI_Agent_FSC_Developer Settings
-Configurable via Cheshire Cat Admin Panel
-"""
-
 from pydantic import BaseModel, Field
 from cat.mad_hatter.decorators import plugin
 
-
-class FSCSettings(BaseModel):
-    """
-    FSC Developer Plugin Settings
-    """
+class FSCDeveloperSettings(BaseModel):
+    """FSC Developer Plugin Configuration"""
     
-    max_fsr_per_safety_goal: int = Field(
+    max_fsrs_per_goal: int = Field(
         default=10,
         ge=1,
         le=50,
-        description="Maximum number of FSRs to generate from a single Safety Goal (1-50)"
+        description="Maximum FSRs to generate per safety goal"
     )
     
-    safety_strategy_text_length: int = Field(
-        default=5,
-        ge=3,
-        le=15,
-        description="Length of Safety Strategy text in lines (3-15 lines)"
+    llm_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="LLM temperature for generation (lower = more deterministic)"
+    )
+    
+    enable_auto_validation: bool = Field(
+        default=True,
+        description="Automatically validate artifacts after generation"
+    )
+    
+    default_output_format: str = Field(
+        default="standard",
+        description="Default output format (standard/minimal/detailed)"
     )
 
 @plugin
 def settings_model():
-    return FSCSettings
+    return FSCDeveloperSettings

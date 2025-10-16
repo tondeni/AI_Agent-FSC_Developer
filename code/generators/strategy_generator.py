@@ -4,7 +4,7 @@
 from typing import List, Dict, Optional, Callable
 from core.models import SafetyGoal, SafetyStrategy
 from core.constants import STRATEGY_TYPES
-from settings import FSCSettings
+from settings import FSCDeveloperSettings
 import sys
 import os
 

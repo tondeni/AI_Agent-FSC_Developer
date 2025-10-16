@@ -20,17 +20,28 @@ from core.validators import FSRValidator
     examples=[
         "derive FSRs for all goals",
         "derive functional safety requirements",
-        "generate FSRs from safety goals"
+        "generate FSRs from safety goals",
+        "create FSRs",
+        "derive FSRs",
+        "generate functional safety requirements for all goals",
+        "I need to derive FSRs"
     ]
 )
 def derive_functional_safety_requirements(tool_input, cat):
     """
-    Derive Functional Safety Requirements from safety goals.
+    Use this tool to derive Functional Safety Requirements (FSRs) from loaded safety goals.
+    
+    This tool MUST be used when the user asks to:
+    - derive FSRs
+    - generate FSRs
+    - create functional safety requirements
+    - derive functional safety requirements
     
     Per ISO 26262-3:2018, Clause 7.4.2.
-    Creates FSRs covering detection, control, warning, and other aspects.
     
-    Input: "all goals" or specific goal ID like "SG-001"
+    Input: "all goals" to process all goals, or specific goal ID like "SG-001"
+    
+    Prerequisites: Safety goals must be loaded first using the load_hara tool.
     """
     
     log.info("✅ TOOL CALLED: derive_functional_safety_requirements")
@@ -140,13 +151,41 @@ def derive_functional_safety_requirements(tool_input, cat):
     examples=[
         "show FSR summary",
         "list all FSRs",
-        "show functional safety requirements"
+        "show functional safety requirements",
+        "show all FSRs",
+        "display FSR overview",
+        "what FSRs do we have",
+        "FSR summary",
+        "show me the FSRs",
+        "list functional safety requirements",
+        "display all FSRs",
+        "show FSR statistics",
+        "FSR overview"
     ]
 )
 def show_fsr_summary(tool_input, cat):
     """
-    Show summary of all derived FSRs.
-    Displays FSR distribution by type and ASIL level.
+    Use this tool to show a summary of all derived Functional Safety Requirements (FSRs).
+    
+    This tool MUST be used when the user asks to:
+    - show FSR summary
+    - list all FSRs
+    - display FSRs
+    - view FSR overview
+    - see FSR statistics
+    - show functional safety requirements
+    - get FSR information
+    
+    The tool displays:
+    - Total number of FSRs
+    - Distribution by ASIL level (D, C, B, A, QM)
+    - Distribution by FSR type (Detection, Control, Warning, etc.)
+    - Distribution by Safety Goal
+    - Allocation status
+    
+    Prerequisites: FSRs must be derived first using derive_functional_safety_requirements tool.
+    
+    Input: Not required (can be empty or "all" or "summary")
     """
     
     log.info("✅ TOOL CALLED: show_fsr_summary")
@@ -218,14 +257,49 @@ def show_fsr_summary(tool_input, cat):
     examples=[
         "show FSR FSR-SG-001-DET-1",
         "show details for FSR-001",
-        "explain FSR-SG-002-CTL-1"
+        "explain FSR-SG-002-CTL-1",
+        "what is FSR-SG-001-DET-1",
+        "show me FSR-001",
+        "display FSR FSR-SG-003-WRN-1",
+        "details of FSR-SG-001-CTL-2",
+        "explain FSR 001",
+        "show FSR details for FSR-SG-002-DET-1",
+        "get information about FSR-001",
+        "tell me about FSR-SG-001-DET-1"
     ]
 )
 def show_fsr_details(tool_input, cat):
     """
-    Show detailed information for a specific FSR.
+    Use this tool to show detailed information for a specific Functional Safety Requirement (FSR).
     
-    Input: FSR ID (e.g., "FSR-SG-001-DET-1")
+    This tool MUST be used when the user asks to:
+    - show FSR details
+    - explain a specific FSR
+    - display FSR information
+    - show FSR [ID]
+    - what is FSR-[ID]
+    - get details about FSR-[ID]
+    - tell me about FSR-[ID]
+    
+    The tool displays complete FSR information including:
+    - FSR ID and type
+    - Full description
+    - Linked Safety Goal
+    - ASIL level
+    - Allocation target (HW/SW component)
+    - Verification criteria
+    - Timing requirements (FTTI)
+    - Safe state definition
+    - Operating modes
+    
+    Prerequisites: FSRs must be derived first.
+    
+    Input: FSR ID in format "FSR-SG-XXX-YYY-Z" (e.g., "FSR-SG-001-DET-1")
+    The tool accepts various formats:
+    - "FSR-SG-001-DET-1"
+    - "FSR-001-DET-1" 
+    - "001-DET-1"
+    - "SG-001-DET-1"
     """
     
     log.info(f"✅ TOOL CALLED: show_fsr_details with input: {tool_input}")

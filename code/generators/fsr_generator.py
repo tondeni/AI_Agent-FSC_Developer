@@ -5,7 +5,7 @@ from typing import List, Dict, Optional, Callable
 from core.models import SafetyGoal, SafetyStrategy, FunctionalSafetyRequirement
 from core.constants import FSR_TYPE_CODES, DEFAULT_OPERATING_MODES
 from cat.log import log
-from settings import FSCSettings
+from settings import FSCDeveloperSettings
 import re
 import sys
 import os
