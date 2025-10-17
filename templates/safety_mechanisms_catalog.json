@@ -1,356 +1,411 @@
 {
-  "catalog_name": "ASIL Decomposition Rules",
-  "version": "1.0",
-  "standard": "ISO 26262-9:2018, Clause 5",
-  "scope": "Rules and guidance for ASIL decomposition in Functional Safety Concept",
-
-  "overview": {
-    "purpose": "ASIL decomposition allows splitting a high-ASIL requirement into multiple lower-ASIL requirements with sufficient independence, potentially reducing development complexity while maintaining safety integrity.",
-    "key_principle": "The decomposed requirements must be sufficiently independent such that simultaneous violation is sufficiently unlikely.",
-    "verification": "Independence must be verified through dependent failure analysis per ISO 26262-9:2018, Clause 7.",
-    "notation": "ASIL X(Y) means: ASIL X with independence corresponding to ASIL Y. Example: ASIL B(D) = ASIL B integrity with ASIL D independence."
+  "catalog_info": {
+    "title": "ISO 26262 Safety Mechanisms Catalog",
+    "version": "1.0",
+    "description": "Reference catalog of common safety mechanisms per ISO 26262-4:2018, Clause 6.4.5.4",
+    "note": "This is a reference catalog. Actual mechanisms must be tailored to specific FSRs and system context."
   },
-
-  "valid_decompositions": {
-    "ASIL_D": [
-      {
-        "option": "D(D)",
-        "description": "Single ASIL D requirement (no decomposition)",
-        "requirements": "Full ASIL D development rigor on single element",
-        "when_to_use": "Requirement is achievable at ASIL D, no benefit from decomposition"
-      },
-      {
-        "option": "B(D) + B(D)",
-        "description": "Two ASIL B requirements with ASIL D independence",
-        "requirements": [
-          "Each requirement developed to ASIL B",
-          "ASIL D level independence between requirements",
-          "Freedom from interference must be ensured",
-          "Independent failure modes",
-          "Separate implementation channels"
-        ],
-        "when_to_use": "ASIL D development too complex; two independent ASIL B paths feasible",
-        "example": "Dual independent voltage sensing paths, each ASIL B, with ASIL D independence"
-      },
-      {
-        "option": "C(D) + A(D)",
-        "description": "ASIL C + ASIL A with ASIL D independence",
-        "requirements": [
-          "Primary requirement developed to ASIL C",
-          "Secondary requirement developed to ASIL A",
-          "ASIL D level independence between requirements",
-          "Asymmetric decomposition - one path carries more integrity"
-        ],
-        "when_to_use": "One path can feasibly achieve higher integrity than the other",
-        "example": "Primary detection (ASIL C) + Secondary plausibility check (ASIL A)"
-      }
-    ],
-
-    "ASIL_C": [
-      {
-        "option": "C(D)",
-        "description": "Single ASIL C requirement (no decomposition)",
-        "requirements": "Full ASIL C development rigor on single element",
-        "when_to_use": "Requirement is achievable at ASIL C"
-      },
-      {
-        "option": "B(D) + A(D)",
-        "description": "ASIL B + ASIL A with ASIL D independence",
-        "requirements": [
-          "Primary requirement developed to ASIL B",
-          "Secondary requirement developed to ASIL A",
-          "ASIL D level independence",
-          "Freedom from interference"
-        ],
-        "when_to_use": "ASIL C development complex; independent ASIL B + A paths feasible",
-        "example": "Hardware detection (ASIL B) + Software plausibility (ASIL A)"
-      }
-    ],
-
-    "ASIL_B": [
-      {
-        "option": "B(D)",
-        "description": "Single ASIL B requirement (no decomposition)",
-        "requirements": "Full ASIL B development rigor on single element",
-        "when_to_use": "Requirement is achievable at ASIL B"
-      },
-      {
-        "option": "A(D) + A(D)",
-        "description": "Two ASIL A requirements with ASIL D independence",
-        "requirements": [
-          "Each requirement developed to ASIL A",
-          "ASIL D level independence",
-          "Separate implementation channels",
-          "Freedom from interference"
-        ],
-        "when_to_use": "Two independent ASIL A paths easier than single ASIL B",
-        "example": "Dual independent ASIL A monitoring channels"
-      }
-    ],
-
-    "ASIL_A": [
-      {
-        "option": "A(D)",
-        "description": "Single ASIL A requirement (no decomposition)",
-        "requirements": "Full ASIL A development rigor",
-        "when_to_use": "ASIL A is lowest ASIL; decomposition provides no benefit"
-      }
-    ]
-  },
-
-  "independence_criteria": {
-    "overview": "Requirements must demonstrate sufficient independence to justify decomposition.",
-    "required_analyses": [
-      "Dependent Failure Analysis (ISO 26262-9:2018, Clause 7)",
-      "Freedom from Interference Analysis (ISO 26262-9:2018, Clause 6)",
-      "Common Cause Failure Analysis"
-    ],
-    
-    "independence_measures": [
-      {
-        "category": "Hardware Independence",
-        "measures": [
-          "Separate hardware components or channels",
-          "Independent power supplies (or demonstrated immunity to supply faults)",
-          "Separate signal paths",
-          "Physical separation (when relevant for external interference)",
-          "Different hardware technologies (diverse redundancy)"
-        ]
-      },
-      {
-        "category": "Software Independence",
-        "measures": [
-          "Separate software modules",
-          "Memory protection between modules",
-          "Independent development (different teams/tools if ASIL D)",
-          "Separate execution contexts (tasks, partitions)",
-          "Temporal independence (different execution timing)"
-        ]
-      },
-      {
-        "category": "Failure Mode Independence",
-        "measures": [
-          "Different failure modes or mechanisms",
-          "No common cause failures",
-          "No cascading failures between decomposed requirements",
-          "Independent detection methods"
-        ]
-      },
-      {
-        "category": "Development Independence",
-        "measures": [
-          "Independent verification (different people/methods)",
-          "For ASIL D decomposition: consider independent development teams",
-          "Independent reviews",
-          "Separate configuration management (for high decomposition levels)"
-        ]
-      }
-    ]
-  },
-
-  "when_to_decompose": {
-    "beneficial_scenarios": [
-      {
-        "scenario": "High complexity at full ASIL",
-        "description": "Requirement is highly complex and difficult to achieve at full ASIL",
-        "example": "Complex algorithm required at ASIL D may be split into simpler ASIL B algorithms with independent verification"
-      },
-      {
-        "scenario": "Significant cost savings",
-        "description": "Decomposition enables use of lower-cost components or less rigorous processes",
-        "example": "Using two ASIL B certified components instead of one ASIL D component"
-      },
-      {
-        "scenario": "Technology limitations",
-        "description": "Available technology cannot achieve full ASIL integrity",
-        "example": "Sensor technology limited to ASIL B; use dual sensors with independence"
-      },
-      {
-        "scenario": "Reuse of existing components",
-        "description": "Enables reuse of components certified at lower ASIL",
-        "example": "Existing ASIL B software module can be reused with additional ASIL B monitoring"
-      },
-      {
-        "scenario": "Schedule benefits",
-        "description": "Parallel development of independent ASIL B elements faster than serial ASIL D",
-        "example": "Two teams develop ASIL B(D) paths in parallel"
-      },
-      {
-        "scenario": "Asymmetric architecture",
-        "description": "System naturally has primary and secondary paths of different criticality",
-        "example": "Primary sensor (ASIL C) + backup sensor (ASIL A)"
-      }
-    ],
-
-    "not_beneficial_scenarios": [
-      {
-        "scenario": "Requirement already simple",
-        "description": "Requirement is already simple and achievable at full ASIL",
-        "rationale": "Decomposition adds complexity without benefit"
-      },
-      {
-        "scenario": "Independence overhead exceeds savings",
-        "description": "Cost of ensuring and verifying independence greater than developing at full ASIL",
-        "rationale": "Physical separation, diverse components, additional verification may cost more"
-      },
-      {
-        "scenario": "Architecture doesn't support independence",
-        "description": "System architecture inherently creates dependencies between elements",
-        "rationale": "Cannot achieve required independence; decomposition not valid"
-      },
-      {
-        "scenario": "Increased verification burden",
-        "description": "Verification of independence and two separate requirements exceeds single requirement verification",
-        "rationale": "Dependent failure analysis and freedom from interference verification may be extensive"
-      },
-      {
-        "scenario": "Timeline doesn't allow decomposition analysis",
-        "description": "Project schedule doesn't permit time for decomposition analysis and independence verification",
-        "rationale": "Decomposition analysis, DFA, FFI analysis require significant effort"
-      }
-    ]
-  },
-
-  "decomposition_process": {
-    "step_1": {
-      "name": "Identify Decomposition Candidate",
-      "description": "Identify FSR that is difficult at full ASIL and may benefit from decomposition",
-      "outputs": ["Candidate FSR", "Current ASIL", "Complexity rationale"]
+  
+  "mechanism_categories": {
+    "diagnostic": {
+      "name": "Diagnostic & Detection Mechanisms",
+      "description": "Mechanisms that detect faults, malfunctions, or out-of-range conditions",
+      "iso_reference": "ISO 26262-5:2018, Clause 8"
     },
-    "step_2": {
-      "name": "Select Decomposition Strategy",
-      "description": "Choose valid decomposition from valid_decompositions based on feasibility",
-      "outputs": ["Decomposition option (e.g., B(D) + B(D))", "Rationale for selection"]
+    "redundancy": {
+      "name": "Redundancy & Fault Tolerance",
+      "description": "Mechanisms that provide fault tolerance through redundant channels",
+      "iso_reference": "ISO 26262-9:2018, Clause 4"
     },
-    "step_3": {
-      "name": "Define Decomposed Requirements",
-      "description": "Split original FSR into two or more independent requirements",
-      "outputs": [
-        "FSR-XXX-DEC1: [Description] (ASIL X(D))",
-        "FSR-XXX-DEC2: [Description] (ASIL Y(D))",
-        "Traceability to original FSR"
-      ]
+    "safe_state": {
+      "name": "Safe State Management",
+      "description": "Mechanisms that transition to and maintain safe states",
+      "iso_reference": "ISO 26262-4:2018, Clause 6.4.8"
     },
-    "step_4": {
-      "name": "Establish Independence Measures",
-      "description": "Define how independence will be achieved per independence_criteria",
-      "outputs": [
-        "Hardware independence measures",
-        "Software independence measures",
-        "Failure mode independence",
-        "Development independence plan"
-      ]
+    "supervision": {
+      "name": "Supervision & Monitoring",
+      "description": "Mechanisms that monitor execution, timing, and control flow",
+      "iso_reference": "ISO 26262-6:2018, Clause 8"
     },
-    "step_5": {
-      "name": "Verify Independence",
-      "description": "Conduct analyses to verify independence is achieved",
-      "required_analyses": [
-        "Dependent Failure Analysis (ISO 26262-9, Clause 7)",
-        "Freedom from Interference (ISO 26262-9, Clause 6)",
-        "Common Cause Analysis"
-      ],
-      "outputs": [
-        "DFA report",
-        "FFI analysis report",
-        "Independence justification"
-      ]
-    },
-    "step_6": {
-      "name": "Document Decomposition",
-      "description": "Document decomposition in FSC with complete rationale",
-      "outputs": [
-        "Original FSR and ASIL",
-        "Decomposed FSRs and ASILs",
-        "Decomposition rationale",
-        "Independence justification",
-        "Verification of independence"
-      ]
+    "communication": {
+      "name": "Communication Protection",
+      "description": "Mechanisms that ensure data integrity in communication",
+      "iso_reference": "ISO 26262-6:2018, Clause 7"
     }
   },
-
-  "common_pitfalls": [
+  
+  "diagnostic_mechanisms": [
     {
-      "pitfall": "Assuming independence without verification",
-      "consequence": "Decomposition invalid; safety integrity not maintained",
-      "mitigation": "Always perform DFA and FFI analysis"
+      "id": "SM_DIAG_001",
+      "name": "Signal Plausibility Check - Range",
+      "description": "Verify sensor signal is within expected physical range (min/max limits). Flag fault if signal exceeds bounds.",
+      "applicable_to": ["voltage_sensor", "current_sensor", "temperature_sensor", "pressure_sensor", "position_sensor"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "detection_capability": "Out-of-range sensor faults, sensor disconnection, short circuits",
+      "implementation_notes": "Define range limits based on physical constraints. Consider aging and environmental factors.",
+      "verification_method": "Fault injection testing with out-of-range signals"
     },
     {
-      "pitfall": "Shared power supply without proper analysis",
-      "consequence": "Common cause failure violates independence",
-      "mitigation": "Use separate power or prove immunity to power faults"
+      "id": "SM_DIAG_002",
+      "name": "Signal Plausibility Check - Gradient",
+      "description": "Monitor rate of change of signal. Flag fault if gradient exceeds physically possible rate of change.",
+      "applicable_to": ["all_analog_sensors", "speed_sensor", "acceleration_sensor"],
+      "diagnostic_coverage": "85-90%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Sudden signal jumps, electrical noise, sensor failure transients",
+      "implementation_notes": "Calculate maximum physical gradient. Sample rate must be adequate for detection.",
+      "verification_method": "Fault injection with step changes"
     },
     {
-      "pitfall": "Software sharing resources without protection",
-      "consequence": "Memory corruption or timing interference violates independence",
-      "mitigation": "Implement memory protection and temporal isolation"
+      "id": "SM_DIAG_003",
+      "name": "Signal Plausibility Check - Correlation",
+      "description": "Compare related signals for consistency (e.g., voltage vs current, multiple sensors measuring same parameter).",
+      "applicable_to": ["redundant_sensors", "related_parameters"],
+      "diagnostic_coverage": "85-95%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Single sensor faults, measurement inconsistencies",
+      "implementation_notes": "Define correlation model based on physics. Account for tolerances.",
+      "verification_method": "Inject faults in individual channels"
     },
     {
-      "pitfall": "Common mode failures not identified",
-      "consequence": "Both channels fail simultaneously",
-      "mitigation": "Thorough common cause analysis; consider diverse redundancy"
+      "id": "SM_DIAG_004",
+      "name": "CRC/Checksum Validation",
+      "description": "Calculate and verify cyclic redundancy check or checksum for data integrity.",
+      "applicable_to": ["communication", "memory", "stored_data"],
+      "diagnostic_coverage": "99%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Bit flips, transmission errors, memory corruption",
+      "implementation_notes": "Use appropriate CRC polynomial (CRC16, CRC32) based on data size and ASIL.",
+      "verification_method": "Inject bit errors in protected data"
     },
     {
-      "pitfall": "Cascading failures",
-      "consequence": "Failure in one channel causes failure in other channel",
-      "mitigation": "Ensure fault isolation between channels"
+      "id": "SM_DIAG_005",
+      "name": "Memory ECC (Error Correction Code)",
+      "description": "Detect and correct single-bit errors, detect multi-bit errors in RAM/ROM.",
+      "applicable_to": ["RAM", "ROM", "EEPROM"],
+      "diagnostic_coverage": "Single-bit: 100%, Multi-bit: >99%",
+      "asil_suitability": ["C", "D"],
+      "detection_capability": "Memory bit flips from radiation, aging, disturbance",
+      "implementation_notes": "Hardware ECC preferred. Use SECDED (Single Error Correction, Double Error Detection).",
+      "verification_method": "Fault injection in memory cells"
     },
     {
-      "pitfall": "Decomposition applied too late",
-      "consequence": "Architecture already committed; cannot achieve independence",
-      "mitigation": "Consider decomposition early in FSC phase"
+      "id": "SM_DIAG_006",
+      "name": "Built-In Self-Test (BIST)",
+      "description": "Periodic self-test of hardware components (CPU, memory, peripherals) during initialization or runtime.",
+      "applicable_to": ["microcontroller", "ASIC", "FPGA"],
+      "diagnostic_coverage": "60-90% depending on test coverage",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "detection_capability": "Permanent faults in digital logic, stuck-at faults",
+      "implementation_notes": "Run at startup and periodically. Test duration vs availability trade-off.",
+      "verification_method": "Inject permanent faults"
+    },
+    {
+      "id": "SM_DIAG_007",
+      "name": "Analog-to-Digital Converter Test",
+      "description": "Test ADC accuracy using reference voltage or self-test channels.",
+      "applicable_to": ["ADC", "sensor_interface"],
+      "diagnostic_coverage": "80-90%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "ADC offset errors, gain errors, non-linearity",
+      "implementation_notes": "Use internal reference or test channel. Periodic calibration.",
+      "verification_method": "Inject ADC errors"
+    },
+    {
+      "id": "SM_DIAG_008",
+      "name": "Voltage Monitoring",
+      "description": "Monitor power supply voltage for under-voltage and over-voltage conditions.",
+      "applicable_to": ["power_supply", "battery", "voltage_regulator"],
+      "diagnostic_coverage": "95-99%",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "detection_capability": "Power supply failures, battery degradation",
+      "implementation_notes": "Hardware comparator or software monitoring. Define thresholds with margin.",
+      "verification_method": "Vary supply voltage"
     }
   ],
-
-  "documentation_requirements": {
-    "fsc_section": "ASIL Decomposition",
-    "required_content": [
-      "List of all decomposed requirements",
-      "For each decomposition:",
-      [
-        "Original FSR-ID and ASIL",
-        "Decomposed FSR-IDs and ASILs with (D) notation",
-        "Decomposition rationale (why beneficial)",
-        "Independence measures (how independence achieved)",
-        "Independence verification (DFA, FFI results)",
-        "Traceability (original → decomposed requirements)"
-      ]
-    ],
-    "example_entry": {
-      "original_requirement": "FSR-003-REACT-1: Achieve safe state within 100ms (ASIL D)",
-      "decomposition": "ASIL D → B(D) + B(D)",
-      "decomposed_requirements": [
-        "FSR-003-REACT-1A: Primary safe state path via contactor opening (ASIL B(D))",
-        "FSR-003-REACT-1B: Secondary safe state path via relay opening (ASIL B(D))"
-      ],
-      "independence_measures": [
-        "Hardware: Separate contactor and relay with independent drivers",
-        "Power: Independent 12V supplies with fault isolation",
-        "Control: Separate software modules with memory protection",
-        "Failure Modes: Contactor weld does not affect relay; relay weld does not affect contactor"
-      ],
-      "independence_verification": [
-        "DFA performed: No common cause failures identified",
-        "FFI analysis: Memory protection verified, temporal independence verified",
-        "Test results: Independent operation demonstrated"
-      ],
-      "rationale": "ASIL D contactor control complex; dual ASIL B paths with diverse actuation reduces complexity while maintaining safety"
+  
+  "redundancy_mechanisms": [
+    {
+      "id": "SM_REDUND_001",
+      "name": "Dual Channel Redundancy (1oo2D)",
+      "description": "Two independent channels monitor same parameter. Fault declared if channels disagree beyond threshold.",
+      "applicable_to": ["sensors", "actuators", "processing"],
+      "diagnostic_coverage": "95-99%",
+      "asil_suitability": ["B", "C", "D"],
+      "independence_level": "Channels must have independent HW, power, and signal paths",
+      "implementation_notes": "Define disagreement threshold considering tolerances. Handle single channel failures.",
+      "verification_method": "Inject fault in one channel"
+    },
+    {
+      "id": "SM_REDUND_002",
+      "name": "Triple Modular Redundancy (2oo3 Voting)",
+      "description": "Three independent channels with majority voting. System continues with single fault.",
+      "applicable_to": ["critical_sensors", "critical_processing", "safety_critical_outputs"],
+      "diagnostic_coverage": "99%+",
+      "asil_suitability": ["C", "D"],
+      "independence_level": "Full independence required - separate HW, SW, power",
+      "implementation_notes": "Higher cost. Handles single fault gracefully. Detect and report faulty channel.",
+      "verification_method": "Inject faults in individual channels"
+    },
+    {
+      "id": "SM_REDUND_003",
+      "name": "Diverse Redundancy",
+      "description": "Use different sensor technologies or measurement principles for same parameter.",
+      "applicable_to": ["critical_measurements"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["C", "D"],
+      "independence_level": "Different technologies reduce common cause failures",
+      "implementation_notes": "More complex to calibrate. Protects against systematic faults in one technology.",
+      "verification_method": "Inject technology-specific faults"
+    },
+    {
+      "id": "SM_REDUND_004",
+      "name": "Lockstep CPUs",
+      "description": "Two CPUs execute identical code in parallel. Compare results each cycle.",
+      "applicable_to": ["microcontroller", "ECU_processing"],
+      "diagnostic_coverage": "99%+",
+      "asil_suitability": ["C", "D"],
+      "independence_level": "Physical separation on same die or separate dies",
+      "implementation_notes": "Hardware solution. Immediate fault detection. Single clock cycle latency.",
+      "verification_method": "Inject transient faults in one core"
+    },
+    {
+      "id": "SM_REDUND_005",
+      "name": "Backup Sensor/Actuator",
+      "description": "Secondary sensor or actuator ready to take over if primary fails.",
+      "applicable_to": ["sensors", "actuators"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["B", "C"],
+      "independence_level": "Separate mounting, power, wiring",
+      "implementation_notes": "Monitor both. Switch on primary failure. Verify backup operational.",
+      "verification_method": "Disconnect primary"
+    }
+  ],
+  
+  "safe_state_mechanisms": [
+    {
+      "id": "SM_SAFE_001",
+      "name": "Controlled Shutdown Sequence",
+      "description": "Orderly shutdown of functions when fault detected. Return to defined safe state.",
+      "applicable_to": ["all_systems"],
+      "diagnostic_coverage": "N/A (reaction mechanism)",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "reaction_time": "Defined by FTTI",
+      "implementation_notes": "Define shutdown steps. Ensure state reachable within FTTI. Test all scenarios.",
+      "verification_method": "Trigger faults and verify shutdown"
+    },
+    {
+      "id": "SM_SAFE_002",
+      "name": "Fail-Safe Default Position",
+      "description": "Actuator moves to mechanically safe position on power loss or fault (e.g., spring return).",
+      "applicable_to": ["valves", "clutches", "brakes"],
+      "diagnostic_coverage": "N/A (reaction mechanism)",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "reaction_time": "Immediate (mechanical)",
+      "implementation_notes": "Design mechanical default. Verify safe position is truly safe in all scenarios.",
+      "verification_method": "Remove power/control signal"
+    },
+    {
+      "id": "SM_SAFE_003",
+      "name": "Degraded Mode Operation",
+      "description": "System continues with reduced functionality when fault detected. Full safety maintained.",
+      "applicable_to": ["multi_function_systems"],
+      "diagnostic_coverage": "N/A (reaction mechanism)",
+      "asil_suitability": ["A", "B", "C"],
+      "reaction_time": "Defined by requirements",
+      "implementation_notes": "Define degraded modes. Ensure safety in each mode. Inform driver of degradation.",
+      "verification_method": "Trigger faults and verify degraded operation"
+    },
+    {
+      "id": "SM_SAFE_004",
+      "name": "Emergency Operation Timeout",
+      "description": "Allow limited time emergency operation after fault, then force safe state.",
+      "applicable_to": ["propulsion", "steering", "braking"],
+      "diagnostic_coverage": "N/A (reaction mechanism)",
+      "asil_suitability": ["B", "C"],
+      "reaction_time": "Emergency period defined, then FTTI to safe state",
+      "implementation_notes": "Define emergency operation constraints. Ensure safe state after timeout.",
+      "verification_method": "Let emergency timer expire"
+    },
+    {
+      "id": "SM_SAFE_005",
+      "name": "Output Clamping/Limiting",
+      "description": "Limit actuator output to safe range when fault suspected. Prevent dangerous values.",
+      "applicable_to": ["actuators", "outputs"],
+      "diagnostic_coverage": "N/A (reaction mechanism)",
+      "asil_suitability": ["A", "B", "C"],
+      "reaction_time": "Immediate",
+      "implementation_notes": "Define safe output limits. Implement in hardware if possible.",
+      "verification_method": "Command out-of-range outputs"
+    }
+  ],
+  
+  "supervision_mechanisms": [
+    {
+      "id": "SM_SUPERV_001",
+      "name": "Watchdog Timer",
+      "description": "Timer must be periodically reset by software. If not reset, hardware forces safe state/reset.",
+      "applicable_to": ["software", "microcontroller"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "detection_capability": "Software hangs, infinite loops, timing failures",
+      "implementation_notes": "Window watchdog preferred (too early and too late detection). Independent timer required.",
+      "verification_method": "Prevent watchdog refresh"
+    },
+    {
+      "id": "SM_SUPERV_002",
+      "name": "Execution Time Monitoring",
+      "description": "Monitor execution time of critical functions. Flag fault if execution exceeds deadline.",
+      "applicable_to": ["real_time_tasks", "cyclic_functions"],
+      "diagnostic_coverage": "85-90%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Timing violations, overload, stuck code",
+      "implementation_notes": "Define worst-case execution time + margin. Use hardware timer.",
+      "verification_method": "Delay task execution"
+    },
+    {
+      "id": "SM_SUPERV_003",
+      "name": "Alive/Heartbeat Monitoring",
+      "description": "Monitor that module/task is executing periodically. Flag fault if heartbeat stops.",
+      "applicable_to": ["distributed_systems", "communication_partners"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["A", "B", "C"],
+      "detection_capability": "Module crashes, communication loss, partner failure",
+      "implementation_notes": "Define heartbeat period. Multiple missed beats before fault.",
+      "verification_method": "Stop heartbeat transmission"
+    },
+    {
+      "id": "SM_SUPERV_004",
+      "name": "Control Flow Monitoring",
+      "description": "Verify software follows expected execution path. Detect jumps, skips, corruption.",
+      "applicable_to": ["safety_critical_software"],
+      "diagnostic_coverage": "70-85%",
+      "asil_suitability": ["C", "D"],
+      "detection_capability": "Code corruption, jumps to wrong addresses, control flow errors",
+      "implementation_notes": "Use checkpoints or signatures. Can be SW or HW based.",
+      "verification_method": "Inject control flow errors"
+    },
+    {
+      "id": "SM_SUPERV_005",
+      "name": "Stack Overflow Detection",
+      "description": "Monitor stack usage. Detect if stack grows beyond allocated space.",
+      "applicable_to": ["software_tasks"],
+      "diagnostic_coverage": "95-99%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Stack overflow from recursion, large local variables",
+      "implementation_notes": "Use stack canary or guard pages. Check periodically.",
+      "verification_method": "Allocate large stack variables"
+    },
+    {
+      "id": "SM_SUPERV_006",
+      "name": "CPU Load Monitoring",
+      "description": "Monitor CPU utilization. Flag fault if load exceeds threshold (overload condition).",
+      "applicable_to": ["real_time_systems"],
+      "diagnostic_coverage": "80-90%",
+      "asil_suitability": ["B", "C"],
+      "detection_capability": "System overload, too many tasks, runaway processes",
+      "implementation_notes": "Define maximum acceptable load with margin. Measure idle time.",
+      "verification_method": "Add CPU-intensive tasks"
+    }
+  ],
+  
+  "communication_mechanisms": [
+    {
+      "id": "SM_COMM_001",
+      "name": "Message CRC",
+      "description": "Append CRC to each message. Receiver verifies CRC before using data.",
+      "applicable_to": ["CAN", "LIN", "Ethernet", "internal_messaging"],
+      "diagnostic_coverage": "99%+",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Bit errors in transmission, EMI-induced corruption",
+      "implementation_notes": "Use CRC16 or CRC32 based on message size. Hardware CRC preferred.",
+      "verification_method": "Corrupt message bits"
+    },
+    {
+      "id": "SM_COMM_002",
+      "name": "Sequence Counter",
+      "description": "Increment counter in each message. Detect lost, repeated, or out-of-order messages.",
+      "applicable_to": ["cyclic_messages", "CAN", "Ethernet"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Message loss, repetition, reordering",
+      "implementation_notes": "Rolling counter (e.g., 0-15). Define expected sequence.",
+      "verification_method": "Drop, repeat, or reorder messages"
+    },
+    {
+      "id": "SM_COMM_003",
+      "name": "Message Timeout",
+      "description": "Monitor reception of periodic messages. Flag fault if message not received within timeout.",
+      "applicable_to": ["cyclic_messages", "all_protocols"],
+      "diagnostic_coverage": "95-99%",
+      "asil_suitability": ["A", "B", "C", "D"],
+      "detection_capability": "Transmitter failure, bus failure, cable disconnection",
+      "implementation_notes": "Timeout = message period × 2-3. Trigger safe state on timeout.",
+      "verification_method": "Stop transmitting messages"
+    },
+    {
+      "id": "SM_COMM_004",
+      "name": "Source Address Authentication",
+      "description": "Verify message came from expected source. Prevent spoofing.",
+      "applicable_to": ["security_critical_messages", "CAN", "Ethernet"],
+      "diagnostic_coverage": "90-95%",
+      "asil_suitability": ["B", "C", "D"],
+      "detection_capability": "Message spoofing, incorrect sender",
+      "implementation_notes": "Check sender ID. Use authentication code if needed.",
+      "verification_method": "Send message from wrong source"
+    },
+    {
+      "id": "SM_COMM_005",
+      "name": "Message Timestamp",
+      "description": "Timestamp each message. Receiver checks for freshness. Detect replay attacks.",
+      "applicable_to": ["security_critical", "Ethernet"],
+      "diagnostic_coverage": "85-90%",
+      "asil_suitability": ["C", "D"],
+      "detection_capability": "Replay attacks, old messages",
+      "implementation_notes": "Synchronized time base required. Define maximum age.",
+      "verification_method": "Send old messages"
+    },
+    {
+      "id": "SM_COMM_006",
+      "name": "End-to-End Protection (E2E)",
+      "description": "Comprehensive protection combining CRC, counter, timeout, and other checks.",
+      "applicable_to": ["AUTOSAR", "safety_critical_paths"],
+      "diagnostic_coverage": "99%+",
+      "asil_suitability": ["C", "D"],
+      "detection_capability": "Comprehensive: corruption, loss, delay, repetition",
+      "implementation_notes": "Use AUTOSAR E2E profiles. Covers entire communication path.",
+      "verification_method": "Comprehensive fault injection campaign"
+    }
+  ],
+  
+  "asil_recommendations": {
+    "ASIL_A": {
+      "minimum_mechanisms": 1,
+      "recommended_types": ["diagnostic", "supervision"],
+      "notes": "Simple mechanisms sufficient. Single layer of protection."
+    },
+    "ASIL_B": {
+      "minimum_mechanisms": 2,
+      "recommended_types": ["diagnostic", "safe_state", "supervision"],
+      "notes": "Multiple independent mechanisms. Detect + react."
+    },
+    "ASIL_C": {
+      "minimum_mechanisms": 3,
+      "recommended_types": ["diagnostic", "redundancy", "safe_state", "supervision"],
+      "notes": "Comprehensive protection. Consider redundancy for critical paths."
+    },
+    "ASIL_D": {
+      "minimum_mechanisms": 3,
+      "recommended_types": ["diagnostic", "redundancy", "safe_state", "supervision", "communication"],
+      "notes": "Highest protection. Redundancy often required. Comprehensive testing."
     }
   },
-
-  "references": {
-    "primary": "ISO 26262-9:2018, Clause 5 - ASIL decomposition",
-    "related": [
-      "ISO 26262-9:2018, Clause 6 - Criteria for coexistence of elements",
-      "ISO 26262-9:2018, Clause 7 - Analysis of dependent failures",
-      "ISO 26262-3:2018, Clause 7.4.2.8 - Allocation of FSRs"
-    ]
-  },
-
-  "usage_notes": {
-    "when_to_apply": "During FSR allocation phase of FSC development",
-    "decision_point": "Before finalizing FSR allocation to architectural elements",
-    "impact": "Affects system architecture, component selection, verification approach",
-    "approval": "Decomposition strategy should be reviewed and approved by safety team",
-    "traceability": "Maintain clear traceability from original FSR through decomposed FSRs to implementation"
+  
+  "usage_guidelines": {
+    "selection": "Select mechanisms based on FSR type, ASIL level, failure modes, and system architecture.",
+    "combination": "Combine mechanisms for defense in depth. Ensure mechanisms are independent.",
+    "verification": "Each mechanism must be verifiable. Define test methods for fault injection.",
+    "documentation": "Document mechanism rationale, coverage, and verification results."
   }
 }

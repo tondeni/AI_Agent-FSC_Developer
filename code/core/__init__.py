@@ -12,7 +12,9 @@ from .models import (
     FunctionalSafetyRequirement,
     ValidationCriterion,
     HaraData,
-    FSCWorkProduct
+    FSCWorkProduct,
+    SafetyMechanism,
+    MechanismFSRMapping
 )
 
 from .constants import (

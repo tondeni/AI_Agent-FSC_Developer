@@ -422,3 +422,229 @@ def list_fsrs_for_goal(tool_input, cat):
     log.info(f"📋 Listed {len(matching_fsrs)} FSRs for {sg_id}")
     
     return output
+
+
+@tool(
+    return_direct=False,
+    examples=[
+        "generate structured FSC content",
+        "create complete FSC with templates",
+        "build FSC using templates"
+    ]
+)
+def generate_structured_fsc_content(tool_input, cat):
+    """
+    Generate complete, structured FSC content using template-based approach.
+    
+    Output is stored as pure dictionary in working memory - no classes needed.
+    Contract-based: Output Formatter can read this without importing anything.
+    
+    Prerequisites:
+    - Safety goals must be loaded (from HARA)
+    
+    Input: system architecture description (optional)
+    """
+    
+    log.info("✅ TOOL CALLED: generate_structured_fsc_content")
+    
+    # Import only local helpers
+    import sys
+    import os
+    code_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, code_folder)
+    
+    from models.fsc_templates import FSCContentTemplate
+    from models.fsc_content_models import (
+        create_fsr_dict,
+        create_safety_mechanism_dict,
+        create_fsc_content_dict,
+        validate_fsc_content,
+        get_fsc_statistics,
+        format_fsc_summary
+    )
+    import json
+    import re
+    
+    # Get prerequisites
+    goals_data = cat.working_memory.get("fsc_safety_goals", [])
+    system_name = cat.working_memory.get("system_name", "Unknown System")
+    architecture_desc = tool_input.strip() if tool_input.strip() else "To be defined"
+    
+    if not goals_data:
+        return """❌ No safety goals loaded. 
+
+**Required:**
+1. Load HARA: `load HARA for [system]`
+
+Then retry: `generate structured FSC content`"""
+    
+    # Initialize template
+    template = FSCContentTemplate()
+    
+    # Prepare context
+    goals_list = "\n".join([
+        f"- {g.get('id', 'SG-?')}: {g.get('goal', 'Unknown')} (ASIL {g.get('asil', '?')})"
+        for g in goals_data
+    ])
+    
+    # Collect generated content
+    introduction = ""
+    safety_goal_summary = ""
+    all_fsrs = []
+    all_sms = []
+    architectural_allocation = ""
+    verification_strategy = ""
+    
+    log.info(f"📝 Generating structured FSC for {system_name}")
+    
+    # 1. Introduction
+    log.info("Generating: introduction")
+    intro_context = {
+        'item_name': system_name,
+        'item_context': f"System with {len(goals_data)} safety goals requiring FSC per ISO 26262-3:2018"
+    }
+    intro_prompt = template.get_prompt('introduction', intro_context)
+    introduction = cat.llm(intro_prompt).strip()
+    
+    # 2. Safety Goal Summary
+    log.info("Generating: safety_goal_summary")
+    sg_context = {'safety_goals_list': goals_list}
+    sg_prompt = template.get_prompt('safety_goal_summary', sg_context)
+    safety_goal_summary = cat.llm(sg_prompt).strip()
+    
+    # 3. FSRs (per goal)
+    log.info("Generating: FSRs")
+    
+    # Get strategies - handle both dict and list formats
+    strategies_data = cat.working_memory.get("fsc_safety_strategies", [])
+    
+    for goal in goals_data:
+        goal_id = goal.get('id', 'SG-?')
+        
+        # Handle both dict (keyed by goal_id) and list formats
+        if isinstance(strategies_data, dict):
+            goal_strategies = strategies_data.get(goal_id, {})
+        elif isinstance(strategies_data, list):
+            # Filter strategies for this goal from list
+            goal_strategies = [s for s in strategies_data if s.get('safety_goal_id') == goal_id]
+        else:
+            goal_strategies = {}
+        
+        strategies_text = json.dumps(goal_strategies, indent=2) if goal_strategies else "Standard strategies per ISO 26262-3"
+        
+        fsr_context = {
+            'safety_goal': goal.get('goal', ''),
+            'asil': goal.get('asil', 'QM'),
+            'goal_id': goal_id.replace('SG-', ''),
+            'strategies': strategies_text
+        }
+        
+        fsr_prompt = template.get_prompt('functional_safety_requirements', fsr_context)
+        fsr_response = cat.llm(fsr_prompt)
+        
+        # Parse JSON
+        try:
+            fsr_response_clean = re.sub(r'```json\s*|\s*```', '', fsr_response)
+            fsr_json = json.loads(fsr_response_clean)
+            
+            for fsr_data in fsr_json:
+                # Use helper function to create FSR dict
+                fsr_dict = create_fsr_dict(
+                    id=fsr_data['id'],
+                    description=fsr_data['description'],
+                    type=fsr_data['type'],
+                    asil=fsr_data['asil'],
+                    safety_goal_id=goal_id,
+                    safe_state=fsr_data['safe_state'],
+                    ftti=fsr_data['ftti'],
+                    validation_criteria=fsr_data['validation_criteria'],
+                    verification_method=fsr_data['verification_method'],
+                    allocated_to=None,
+                    operating_modes="All modes"
+                )
+                all_fsrs.append(fsr_dict)
+        except (json.JSONDecodeError, KeyError) as e:
+            log.warning(f"Failed to parse FSRs for {goal_id}: {e}")
+            continue
+    
+    # 4. Safety Mechanisms
+    log.info("Generating: safety_mechanisms")
+    fsr_list_text = "\n".join([f"- {fsr['id']}: {fsr['description']}" for fsr in all_fsrs])
+    
+    sm_context = {
+        'fsr_list': fsr_list_text,
+        'goal_id': 'ALL',
+        'asil': 'D'
+    }
+    
+    sm_prompt = template.get_prompt('safety_mechanisms', sm_context)
+    sm_response = cat.llm(sm_prompt)
+    
+    try:
+        sm_response_clean = re.sub(r'```json\s*|\s*```', '', sm_response)
+        sm_json = json.loads(sm_response_clean)
+        
+        for sm_data in sm_json:
+            # Use helper function
+            sm_dict = create_safety_mechanism_dict(
+                id=sm_data['id'],
+                name=sm_data.get('name', sm_data['id']),
+                description=sm_data['description'],
+                type=sm_data['type'],
+                fsr_coverage=sm_data['fsr_coverage'],
+                asil=sm_data['asil'],
+                implementation=sm_data.get('implementation', 'TBD')
+            )
+            all_sms.append(sm_dict)
+    except (json.JSONDecodeError, KeyError) as e:
+        log.warning(f"Failed to parse safety mechanisms: {e}")
+    
+    # 5. Architectural Allocation
+    log.info("Generating: architectural_allocation")
+    alloc_context = {
+        'num_fsrs': len(all_fsrs),
+        'architecture_description': architecture_desc
+    }
+    alloc_prompt = template.get_prompt('architectural_allocation', alloc_context)
+    architectural_allocation = cat.llm(alloc_prompt).strip()
+    
+    # 6. Verification Strategy
+    log.info("Generating: verification_strategy")
+    asil_levels = list(set(fsr['asil'] for fsr in all_fsrs))
+    verif_context = {
+        'num_fsrs': len(all_fsrs),
+        'asil_levels': ', '.join(asil_levels)
+    }
+    verif_prompt = template.get_prompt('verification_strategy', verif_context)
+    verification_strategy = cat.llm(verif_prompt).strip()
+    
+    # Create final structured content - PURE DICTIONARY
+    fsc_content = create_fsc_content_dict(
+        system_name=system_name,
+        introduction=introduction,
+        safety_goal_summary=safety_goal_summary,
+        functional_safety_requirements=all_fsrs,
+        safety_mechanisms=all_sms,
+        architectural_allocation=architectural_allocation,
+        verification_strategy=verification_strategy
+    )
+    
+    # Validate before storing
+    is_valid, errors = validate_fsc_content(fsc_content)
+    if not is_valid:
+        log.warning(f"Generated content has validation issues: {errors}")
+    
+    # Store in working memory - Just a dictionary!
+    cat.working_memory['fsc_structured_content'] = fsc_content
+    cat.working_memory['fsc_stage'] = 'structured_content_generated'
+    
+    # Get statistics and format output
+    return format_fsc_summary(fsc_content) + """
+
+**Next Steps:**
+1. Review content: `show fsc structured content`
+2. Allocate FSRs: `allocate all FSRs`
+3. Export documents: `create fsc word document` (in Output Formatter plugin)
+
+💾 Structured content stored in working memory as 'fsc_structured_content'
+📋 Contract version: 1.0"""

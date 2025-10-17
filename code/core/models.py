@@ -145,6 +145,112 @@ class FunctionalSafetyRequirement:
 
 
 @dataclass
+class SafetyMechanism:
+    """
+    Safety Mechanism for implementing FSRs.
+    Per ISO 26262-4:2018, Clause 6.4.5.4
+    
+    Safety mechanisms are technical solutions that detect, control, or tolerate faults.
+    """
+    id: str
+    name: str
+    mechanism_type: str  # diagnostic, redundancy, safe_state, supervision, communication
+    description: str
+    applicable_fsrs: List[str] = field(default_factory=list)
+    asil_suitability: List[str] = field(default_factory=list)  # ['A', 'B', 'C', 'D']
+    diagnostic_coverage: str = ""  # e.g., "90-95%", "High", "Medium"
+    implementation_notes: str = ""
+    verification_method: str = ""
+    
+    # Detailed characteristics
+    detection_capability: str = ""  # For diagnostic mechanisms
+    reaction_time: str = ""  # For safe state mechanisms
+    independence_level: str = ""  # For redundancy mechanisms
+    
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for serialization"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'mechanism_type': self.mechanism_type,
+            'description': self.description,
+            'applicable_fsrs': self.applicable_fsrs,
+            'asil_suitability': self.asil_suitability,
+            'diagnostic_coverage': self.diagnostic_coverage,
+            'implementation_notes': self.implementation_notes,
+            'verification_method': self.verification_method,
+            'detection_capability': self.detection_capability,
+            'reaction_time': self.reaction_time,
+            'independence_level': self.independence_level
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'SafetyMechanism':
+        """Create SafetyMechanism from dictionary"""
+        return cls(
+            id=data.get('id', ''),
+            name=data.get('name', ''),
+            mechanism_type=data.get('mechanism_type', ''),
+            description=data.get('description', ''),
+            applicable_fsrs=data.get('applicable_fsrs', []),
+            asil_suitability=data.get('asil_suitability', []),
+            diagnostic_coverage=data.get('diagnostic_coverage', ''),
+            implementation_notes=data.get('implementation_notes', ''),
+            verification_method=data.get('verification_method', ''),
+            detection_capability=data.get('detection_capability', ''),
+            reaction_time=data.get('reaction_time', ''),
+            independence_level=data.get('independence_level', '')
+        )
+    
+    def is_suitable_for_asil(self, asil: str) -> bool:
+        """Check if mechanism is suitable for given ASIL level"""
+        asil_clean = asil.replace('ASIL ', '').strip().upper()
+        return asil_clean in [a.upper() for a in self.asil_suitability]
+    
+    def get_mechanism_category(self) -> str:
+        """Get user-friendly mechanism category"""
+        category_map = {
+            'diagnostic': 'Diagnostic & Detection',
+            'redundancy': 'Redundancy & Fault Tolerance',
+            'safe_state': 'Safe State Management',
+            'supervision': 'Supervision & Monitoring',
+            'communication': 'Communication Protection'
+        }
+        return category_map.get(self.mechanism_type, self.mechanism_type)
+
+
+@dataclass
+class MechanismFSRMapping:
+    """
+    Mapping between safety mechanisms and FSRs.
+    Tracks which mechanisms implement which requirements.
+    """
+    fsr_id: str
+    mechanism_ids: List[str] = field(default_factory=list)
+    coverage_rationale: str = ""
+    residual_risk: str = ""
+    
+    def to_dict(self) -> Dict:
+        """Convert to dictionary"""
+        return {
+            'fsr_id': self.fsr_id,
+            'mechanism_ids': self.mechanism_ids,
+            'coverage_rationale': self.coverage_rationale,
+            'residual_risk': self.residual_risk
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'MechanismFSRMapping':
+        """Create from dictionary"""
+        return cls(
+            fsr_id=data.get('fsr_id', ''),
+            mechanism_ids=data.get('mechanism_ids', []),
+            coverage_rationale=data.get('coverage_rationale', ''),
+            residual_risk=data.get('residual_risk', '')
+        )
+
+
+@dataclass
 class ValidationCriterion:
     """
     Safety Validation Criterion.
@@ -203,7 +309,6 @@ class HaraData:
             'asil_distribution': self.get_asil_distribution()
         }
 
-
 @dataclass
 class FSCWorkProduct:
     """
@@ -216,6 +321,8 @@ class FSCWorkProduct:
     fsrs: List[FunctionalSafetyRequirement]
     validation_criteria: List[ValidationCriterion]
     verification_report: str = ""
+    safety_mechanisms: List[SafetyMechanism] = field(default_factory=list)
+    mechanism_fsr_mappings: List[MechanismFSRMapping] = field(default_factory=list)
     
     def is_complete(self) -> bool:
         """Check if FSC is complete"""
@@ -237,3 +344,4 @@ class FSCWorkProduct:
             'validation_criteria': len(self.validation_criteria),
             'complete': self.is_complete()
         }
+    
