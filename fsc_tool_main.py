@@ -41,46 +41,46 @@ e) Verify FSC and specify safety validation criteria
 
 ➡️ **Step 1: Extract Safety Goals from HARA**
 - Command: `load HARA for [item name]`
-- Extracts: Safety Goals, ASIL, Safe States, FTTI
-- Required by ISO 26262-3:2018, 7.3.1
+- 🔧 Extracts: Safety Goals, ASIL, Safe States, FTTI
+- 📝 Required by ISO 26262-3:2018, 7.3.1
 
 ➡️ **Step 2: Develop Functional Safety Strategy**
 - Command: `develop safety strategy for all safety goals`
-- Define strategies for fault avoidance, detection and control.
--  Required by ISO 26262-3:2018, 7.4.2.3, 
+- 🔧 Define strategies for fault avoidance, detection and control.
+- 📝 Required by ISO 26262-3:2018, 7.4.2.3, 
 
 ➡️ **Step 3: Derive Functional Safety Requirements (FSRs)**
 - Command: `derive FSRs for all goals`
-- At least one FSR has to be derived for a safety goal
--  Required by ISO 26262-3:2018, 7.4.2.1 and 7.4.2.2
+- 🔧 At least one FSR has to be derived for a safety goal
+- 📝 Required by ISO 26262-3:2018, 7.4.2.1 and 7.4.2.2
 
 ➡️ **Step 4: Allocate FSRs to Architectural Elements**
 - Command: `allocate all FSRs`
-- Allocate FSRs to System architectural elements
-- Required by  ISO 26262-3:2018, 7.4.2.8
+-🔧 Allocate FSRs to System architectural elements
+-📝 Required by  ISO 26262-3:2018, 7.4.2.8
 
 ➡️ **Step 5: Specify Safety Validation Criteria**
 - Command: `specify validation criteria`
-- Specify validation criteria for FSRs and safety goals 
-- Required by ISO 26262-3:2018, 7.4.3
+- 🔧 Specify validation criteria for FSRs and safety goals 
+- 📝 Required by ISO 26262-3:2018, 7.4.3
 
 ➡️ **Step 6: Generate FSC Work Products**
 - Command: `generate FSC document`
-- Per ISO 26262-3:2018, 7.5
-- Creates:
+- 🔧Creates:
   * FSC Document (7.5.1)
   * Verification Report (7.5.2)
   * FSR Traceability Matrix
+- 📝 Required by ISO 26262-3:2018, 7.5
 
 ---
 
-### **ISO 26262-3:2018, Clause 7 References:**
+### **This workflow ensures to cover the ISO 26262-3:2018, Clause 7 References:**
 
-- **7.4.1**: General requirements
-- **7.4.2**: Derivation of functional safety requirements
-- **7.4.3**: Safety validation criteria
-- **7.4.4**: Verification of FSC
-- **7.5**: Work products
+- ✅️ **7.4.1**: General requirements
+- ✅️ **7.4.2**: Derivation of functional safety requirements
+- ✅️ **7.4.3**: Safety validation criteria
+- ✅️ **7.4.4**: Verification of FSC
+- ✅️ **7.5**: Work products
 
 ---
 
