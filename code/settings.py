@@ -5,7 +5,7 @@ class FSCDeveloperSettings(BaseModel):
     """FSC Developer Plugin Configuration"""
     
     max_fsrs_per_goal: int = Field(
-        default=10,
+        default=5,
         ge=1,
         le=50,
         description="Maximum FSRs to generate per safety goal"
@@ -26,6 +26,13 @@ class FSCDeveloperSettings(BaseModel):
     default_output_format: str = Field(
         default="standard",
         description="Default output format (standard/minimal/detailed)"
+    )
+    
+    strategy_text_length: int = Field(
+        default=5,
+        ge=3,
+        le=15,
+        description="Maximum number of lines for each safety strategy description"
     )
 
 @plugin

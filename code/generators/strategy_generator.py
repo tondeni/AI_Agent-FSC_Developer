@@ -29,23 +29,24 @@ class StrategyGenerator:
     i) Arbitration
     """
     
-    def __init__(self, llm_function, strategy_text_length: Callable[[str], str]):
+    def __init__(self, llm_function: Callable[[str], str], strategy_text_length: int):
         """
         Initialize strategy generator.
         
         Args:
             llm_function: Function that takes a prompt string and returns LLM response
+            strategy_text_length: Maximum number of lines for each strategy description
         """
         self.llm = llm_function
         self.strategy_text_length = strategy_text_length
     
-    def generate_strategies(self, safety_goals: List[SafetyGoal], strategy_length: int,
+    def generate_strategies(self, safety_goals: List[SafetyGoal],
                           system_name: str = "the system") -> List[SafetyStrategy]:
         """
         Generate safety strategies for all safety goals.
         
         Args:
-            safety_goals: List of SafetyGoal objects
+            safety_goals: List of SafetyGoal objects or dictionaries
             system_name: Name of the system
             
         Returns:
@@ -54,16 +55,25 @@ class StrategyGenerator:
         strategies = []
         
         for goal in safety_goals:
+            # Handle both SafetyGoal objects and dictionaries
+            if isinstance(goal, dict):
+                # Convert dict to SafetyGoal object
+                try:
+                    goal = SafetyGoal.from_dict(goal)
+                except Exception as e:
+                    print(f"Error converting goal dict to object: {e}")
+                    continue
+            
             if not goal.is_safety_relevant():
                 continue
             
-            strategy = self.generate_strategy_for_goal(goal, strategy_length, system_name)
+            strategy = self.generate_strategy_for_goal(goal, system_name)
             if strategy:
                 strategies.append(strategy)
         
         return strategies
     
-    def generate_strategy_for_goal(self, goal: SafetyGoal, strategy_length: str,
+    def generate_strategy_for_goal(self, goal: SafetyGoal,
                                    system_name: str = "the system") -> Optional[SafetyStrategy]:
         """
         Generate safety strategy for a single safety goal.
@@ -76,7 +86,7 @@ class StrategyGenerator:
             SafetyStrategy object or None if generation fails
         """
         # Build prompt
-        prompt = self._build_strategy_prompt(goal, strategy_length, system_name)
+        prompt = self._build_strategy_prompt(goal, system_name)
         
         # Get LLM response
         try:
@@ -96,7 +106,6 @@ class StrategyGenerator:
             return None
     
     def _build_strategy_prompt(self, goal: SafetyGoal, 
-                               strategy_text_length: str,
                                system_name: str
                               ) -> str:
         """
@@ -104,7 +113,6 @@ class StrategyGenerator:
         
         Args:
             goal: SafetyGoal object
-            strategy_text_length: maximum length of safety strategy (in lines)
             system_name: Name of the system
             
         Returns:
@@ -122,7 +130,7 @@ class StrategyGenerator:
 
 
 **Requirements:**
-- Each strategy text should be approximately {strategy_text_length} lines long
+- Each strategy text should be approximately {self.strategy_text_length} lines long
 - Be specific to the safety goal
 - Focus on "what" not "how"
 - Use clear, concise language
@@ -133,7 +141,7 @@ Develop 9 comprehensive safety strategies to achieve this safety goal. Each stra
 **ISO 26262-3:2018, Clause 7.4.2.3 Requirements:**
 
 You must specify strategies for the following:
-**IMPORTANT** Each strategy must be maximum {strategy_text_length} lines long
+**IMPORTANT** Each strategy must be maximum {self.strategy_text_length} lines long
 
 ### a) Fault Avoidance Strategy (7.4.2.3.a)
 How will faults be avoided through design, component selection, or development processes?
@@ -209,7 +217,7 @@ Examples: Safety override logic, priority mechanisms, conflict resolution
 
 **Requirements:**
 - Each strategy must be specific to this safety goal and system
-- Each strategy must be long maximum {strategy_text_length} lines
+- Each strategy must be long maximum {self.strategy_text_length} lines
 - Separate each strategy with a horizontal rule: ---
 - Strategies must be technically feasible and implementable
 - Consider ASIL {goal.asil} requirements in strategy development

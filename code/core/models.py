@@ -28,21 +28,42 @@ class SafetyGoal:
         """Check if goal is safety-relevant (not QM)"""
         return self.asil.upper() in ['A', 'B', 'C', 'D']
     
-    def to_dict(self) -> Dict:
-        """Convert to dictionary for serialization"""
+    @classmethod
+    def from_dict(cls, data: dict) -> 'SafetyGoal':
+        """
+        Create a SafetyGoal from a dictionary.
+        
+        Args:
+            data: Dictionary containing safety goal data
+            
+        Returns:
+            SafetyGoal instance
+        """
+        return cls(
+            id=data.get('id'),
+            description=data.get('description'),
+            asil=data.get('asil'),
+            safe_state=data.get('safe_state'),
+            ftti=data.get('ftti')
+        )
+    
+    def to_dict(self) -> dict:
+        """
+        Convert SafetyGoal to a dictionary.
+        
+        Returns:
+            Dictionary representation of the safety goal
+        """
         return {
             'id': self.id,
             'description': self.description,
             'asil': self.asil,
             'safe_state': self.safe_state,
-            'ftti': self.ftti,
-            'severity': self.severity,
-            'exposure': self.exposure,
-            'controllability': self.controllability,
-            'hazard_id': self.hazard_id,
-            'hazardous_event': self.hazardous_event,
-            'operational_situation': self.operational_situation
+            'ftti': self.ftti
         }
+    
+    def __repr__(self):
+        return f"SafetyGoal(id='{self.id}', asil='{self.asil}')"
 
 
 @dataclass
@@ -72,21 +93,36 @@ class SafetyStrategy:
         """Check if all required strategies are defined"""
         return all(s in self.strategies for s in self.REQUIRED_STRATEGIES)
     
-    def to_dict(self) -> Dict:
-        """Convert to dictionary"""
-        return {
-            'safety_goal_id': self.safety_goal_id,
-            'strategies': self.strategies,
-            'complete': self.is_complete()
-        }
-    
     @classmethod
-    def from_dict(cls, data: Dict) -> 'SafetyStrategy':
-        """Create SafetyStrategy from dictionary (ignoring computed fields)"""
+    def from_dict(cls, data: dict) -> 'SafetyStrategy':
+        """
+        Create a SafetyStrategy from a dictionary.
+        
+        Args:
+            data: Dictionary containing strategy data
+            
+        Returns:
+            SafetyStrategy instance
+        """
         return cls(
-            safety_goal_id=data['safety_goal_id'],
+            safety_goal_id=data.get('safety_goal_id'),
             strategies=data.get('strategies', {})
         )
+    
+    def to_dict(self) -> dict:
+        """
+        Convert SafetyStrategy to a dictionary.
+        
+        Returns:
+            Dictionary representation of the strategy
+        """
+        return {
+            'safety_goal_id': self.safety_goal_id,
+            'strategies': self.strategies
+        }
+    
+    def __repr__(self):
+        return f"SafetyStrategy(safety_goal_id='{self.safety_goal_id}', strategies={len(self.strategies)})"
 
 
 @dataclass

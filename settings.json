@@ -1,4 +1,9 @@
 {
     "max_fsr_per_safety_goal": 3,
-    "safety_strategy_text_length": 3
+    "safety_strategy_text_length": 3,
+    "max_fsrs_per_goal": 3,
+    "llm_temperature": 0.3,
+    "enable_auto_validation": false,
+    "default_output_format": "standard",
+    "strategy_text_length": 3
 }
