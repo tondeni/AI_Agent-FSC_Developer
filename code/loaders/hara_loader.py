@@ -54,7 +54,6 @@ class HARALoader:
         # SOURCE 2: Check hara_inputs/ folder
         hara_data = self._load_from_hara_inputs_folder(item_name)
         if hara_data:
-
             return hara_data
         
         # SOURCE 3: Check generated_documents/ folder

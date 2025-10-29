@@ -81,52 +81,32 @@ e) Verify FSC and specify safety validation criteria
 
 ---
 
-### ➡️ **Step 3: Derive Functional Safety Requirements (FSRs)**
+### ➡️ **Step 3: Derive Functional Safety Requirements**
 **Command:** `derive FSRs for all goals`
-
-**What it does:**
-- Derives FSRs from safety goals and strategies
-- Generates 5-10 FSRs per safety goal (minimum 1)
-- Creates measurable, verifiable requirements
-- FSR types: Avoidance, Detection, Control, Transition, Tolerance, Warning, Timing, Arbitration
-
-**ISO Reference:** 7.4.2.1, 7.4.2.2
-
-**Output:** Complete set of FSRs with IDs, descriptions, ASIL
+└─> **Export:** `export FSRs to excel` (review before allocation)
 
 ---
 
 ### ➡️ **Step 4: Allocate FSRs to Architecture**
 **Command:** `allocate all FSRs`
-
-**What it does:**
-- Allocates FSRs to system architectural elements
-- Assigns to hardware, software, external systems, or mechanical elements
-- Maintains ASIL integrity
-- Documents allocation rationale and interfaces
-
-**ISO Reference:** 7.4.2.8
-
-**Output:** FSRs allocated to components with rationale
+└─> **Export:** `create excel file` (allocation matrix)
 
 ---
 
-### ➡️ **Step 5: Specify Safety Validation Criteria**
+### ➡️ **Step 5: Identify Safety Mechanisms**
+**Command:** `identify safety mechanisms`
+- Identifies diagnostic mechanisms
+- Defines redundancy strategies
+- Maps mechanisms to FSRs
+└─> **Export:** `export safety mechanisms to excel` (when available)
+
+---
+### ➡️ **Step 6: Specify Validation Criteria**
 **Command:** `specify validation criteria`
 
-**What it does:**
-- Defines acceptance criteria for safety validation
-- Specifies test methods and conditions
-- Sets measurable pass/fail criteria
-- Supports ISO 26262-4:2018, Clause 8 validation
-
-**ISO Reference:** 7.4.3
-
-**Output:** Validation criteria for FSRs and goals
-
 ---
 
-### ➡️ **Step 6: Verify FSC**
+### ➡️ **Step 7: Verify FSC**
 **Command:** `verify FSC`
 
 **What it does:**
@@ -141,7 +121,7 @@ e) Verify FSC and specify safety validation criteria
 
 ---
 
-### ➡️ **Step 7: Generate FSC Documentation**
+### ➡️ **Step 8: Generate FSC Documentation**
 **Command:** `generate FSC document`
 
 **What it does:**

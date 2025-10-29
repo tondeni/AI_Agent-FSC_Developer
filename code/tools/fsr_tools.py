@@ -21,22 +21,14 @@ from core.validators import FSRValidator
         "derive FSRs for all goals",
         "derive functional safety requirements",
         "generate FSRs from safety goals",
-        "create FSRs",
-        "derive FSRs",
-        "generate functional safety requirements for all goals",
-        "I need to derive FSRs"
+        "derive FSRs"
     ]
 )
 def derive_functional_safety_requirements(tool_input, cat):
     """
     Use this tool to derive Functional Safety Requirements (FSRs) from loaded safety goals.
     
-    This tool MUST be used when the user asks to:
-    - derive FSRs
-    - generate FSRs
-    - create functional safety requirements
-    - derive functional safety requirements
-    
+    This tool MUST be used when the user asks to derive, create or generate functional safety requirements or FSRs    
     Per ISO 26262-3:2018, Clause 7.4.2.
     
     Input: "all goals" to process all goals, or specific goal ID like "SG-001"
@@ -44,7 +36,7 @@ def derive_functional_safety_requirements(tool_input, cat):
     Prerequisites: Safety goals must be loaded first using the load_hara tool.
     """
     
-    log.info("✅ TOOL CALLED: derive_functional_safety_requirements")
+    log.warning(f"----------------✅ TOOL CALLED: derive_functional_safety_requirements with input: {tool_input}")
     
     # Get data from working memory
     goals_data = cat.working_memory.get("fsc_safety_goals", [])
@@ -92,9 +84,10 @@ def derive_functional_safety_requirements(tool_input, cat):
             log.warning("⚠️ FSR validation found issues")
         
         # Store in working memory
-        cat.working_memory["fsc_functional_requirements"] = [f.to_dict() for f in fsrs]
-        cat.working_memory["last_operation"] = "fsr_derivation"
-        cat.working_memory["operation_timestamp"] = datetime.now().isoformat()
+        cat.working_memory.fsc_functional_requirements = [f.to_dict() for f in fsrs]
+        cat.working_memory.last_operation = "fsr_derivation"
+        cat.working_memory.fsc_stage = "fsrs_derived"
+        cat.working_memory.operation_timestamp = datetime.now().isoformat()
         
         # Calculate statistics
         total = len(fsrs)
@@ -188,7 +181,7 @@ def show_fsr_summary(tool_input, cat):
     Input: Not required (can be empty or "all" or "summary")
     """
     
-    log.info("✅ TOOL CALLED: show_fsr_summary")
+    log.warning(f"----------------✅ TOOL CALLED: show_fsr_summary with input: {tool_input}")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
     system_name = cat.working_memory.get("system_name", "Unknown System")
@@ -302,7 +295,7 @@ def show_fsr_details(tool_input, cat):
     - "SG-001-DET-1"
     """
     
-    log.info(f"✅ TOOL CALLED: show_fsr_details with input: {tool_input}")
+    log.warning(f"----------------✅ TOOL CALLED: show_fsr_details with input: {tool_input}")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
     
@@ -368,7 +361,7 @@ def list_fsrs_for_goal(tool_input, cat):
     Input: Safety goal ID (e.g., "SG-001")
     """
     
-    log.info(f"✅ TOOL CALLED: list_fsrs_for_goal with input: {tool_input}")
+    log.warning(f"----------------✅ TOOL CALLED: list_fsrs_for_goal with input: {tool_input}")
     
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
     goals_data = cat.working_memory.get("fsc_safety_goals", [])
@@ -442,10 +435,11 @@ def generate_structured_fsc_content(tool_input, cat):
     Prerequisites:
     - Safety goals must be loaded (from HARA)
     
-    Input: system architecture description (optional)
+    Input: Not needed
     """
-    
-    log.info("✅ TOOL CALLED: generate_structured_fsc_content")
+    # IMPORTANT ***
+    # Input: system architecture description when available 
+    log.warning(f"----------------✅ TOOL CALLED: generate_structured_fsc_content with input: {tool_input}")
     
     # Import only local helpers
     import sys

@@ -18,29 +18,27 @@ from core.models import FunctionalSafetyRequirement, SafetyGoal, SafetyMechanism
     return_direct=True,
     examples=[
         "identify safety mechanisms",
-        "identify mechanisms for all FSRs",
+        "identify safety mechanisms for all FSRs",
         "generate safety mechanisms",
-        "identify safety mechanisms for FSR-SG01-DET-1"
+        "create mechanisms for FSRs"
     ]
 )
 def identify_safety_mechanisms(tool_input, cat):
-    """
-    Identify and describe safety mechanisms for FSRs.
+    """MECHANISM IDENTIFICATION TOOL: Identifies and creates safety mechanisms for FSRs.
     
-    Per ISO 26262-4:2018, Clause 6.4.5.4:
-    Safety mechanisms detect, control, or tolerate faults to maintain safe state.
+    Use ONLY when user wants to IDENTIFY/CREATE NEW SAFETY MECHANISMS.
+    Analyzes FSRs and generates appropriate mechanisms (diagnostic, redundancy, etc.).
     
-    Mechanism categories:
-    - Diagnostic mechanisms (BIST, checksums, plausibility checks)
-    - Redundancy (dual sensors, voting, lockstep cores)
-    - Safe state management (shutdown sequences, degraded modes)
-    - Watchdogs and supervision
-    - Communication protection (CRC, sequence counters)
+    Trigger phrases: "identify mechanisms", "generate mechanisms", "create mechanisms"
+    NOT for: viewing mechanisms, showing mechanism details, or mechanism summaries
     
-    Input: "identify mechanisms" or "identify mechanisms for FSR-XXX"
+    Action: Generates safety mechanisms based on FSR analysis
+    Prerequisites: FSRs must be derived and preferably allocated
+    ISO Reference: ISO 26262-4:2018, Clause 6.4.5.4
+    Input: Optional - "for FSR-XXX" or leave empty for all FSRs
     """
     
-    log.info("✅ TOOL CALLED: identify_safety_mechanisms")
+    log.warning(f"----------------✅ TOOL CALLED:  identify_safety_mechanisms: {tool_input} ----------------")
     
     # Get data from working memory
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
@@ -126,6 +124,7 @@ def identify_safety_mechanisms(tool_input, cat):
             cat.working_memory.fsc_safety_mechanisms = [m.to_dict() for m in mechanisms]
             cat.working_memory.fsc_mechanism_mappings = [m.to_dict() for m in mappings]
             cat.working_memory.fsc_stage = "mechanisms_identified"
+            cat.working_memory.last_operation = "fsr_mechanisms"
             
             # Format output
             formatter = MechanismFormatter()
@@ -144,15 +143,19 @@ def identify_safety_mechanisms(tool_input, cat):
 
 @tool(return_direct=True)
 def show_mechanism_details(tool_input, cat):
-    """
-    Show detailed information about a specific safety mechanism.
+    """DETAIL TOOL: Shows complete information for ONE SPECIFIC mechanism by ID.
     
-    Examples:
-    - "show mechanism SM-FSR-001-001"
-    - "show details for SM-FSR-001-001"
+    Use when user requests details about A SINGLE SPECIFIC MECHANISM using its ID.
+    
+    Trigger phrases: "show mechanism SM-XXX", "mechanism details for SM-YYY"
+    NOT for: listing mechanisms, creating mechanisms, or mechanism summaries
+    
+    Displays: Full mechanism description, type, coverage, implementation notes
+    Prerequisites: Mechanisms must be identified first
+    Input: REQUIRED - Mechanism ID like "SM-FSR-001-001"
     """
     
-    log.info("✅ TOOL CALLED: show_mechanism_details")
+    log.warning(f"----------------✅ TOOL CALLED: show_mechanism_details with input {tool_input} ----------------")
     
     mechanisms_data = cat.working_memory.get("fsc_safety_mechanisms", [])
     
@@ -233,18 +236,20 @@ def show_mechanism_details(tool_input, cat):
 
 @tool(return_direct=True)
 def show_mechanism_summary(tool_input, cat):
+    """OVERVIEW TOOL: Shows summary of ALL identified safety mechanisms.
+    
+    Use when user wants an OVERVIEW/SUMMARY of ALL MECHANISMS.
+    Shows statistics grouped by mechanism type/category.
+    
+    Trigger phrases: "show mechanism summary", "list all mechanisms", "mechanism overview"
+    NOT for: creating mechanisms, single mechanism details, or FSR-specific mechanisms
+    
+    Displays: Total mechanisms, grouped by category, FSR coverage statistics
+    Prerequisites: Mechanisms must be identified first
+    Input: Not required
     """
-    Show summary of all identified safety mechanisms.
     
-    Groups mechanisms by type and shows coverage statistics.
-    
-    Examples:
-    - "show mechanism summary"
-    - "show all mechanisms"
-    - "mechanism overview"
-    """
-    
-    log.info("✅ TOOL CALLED: show_mechanism_summary")
+    log.warning(f"----------------✅ TOOL CALLED: show_mechanism_summary with input {tool_input} ----------------")
     
     mechanisms_data = cat.working_memory.get("fsc_safety_mechanisms", [])
     mappings_data = cat.working_memory.get("fsc_mechanism_mappings", [])

@@ -16,21 +16,30 @@ from core.validators import StrategyValidator
 
 
 @tool(
-    return_direct=True,
+    return_direct=False,
     examples=[
-        "develop safety strategy for all goals",
+        "develop safety strategies for all goals",
         "develop safety strategy for SG-001",
-        "generate safety strategies",
-        "create strategies for all safety goals"
+        "create safety strategies",
+        "generate strategies for goals"
     ]
 )
 def develop_safety_strategy(tool_input, cat):
-    """
-    Develop safety strategies for safety goals.    
-    Input: "develop safety strategy for all goals" or "develop safety strategy for SG-XXX"
+    """STRATEGY CREATION TOOL: Develops safety strategies for safety goals.
+    
+    Use ONLY when user wants to CREATE/DEVELOP/GENERATE STRATEGIES FOR IDENTIFIED SAFETY GOALS
+    This tool creates the 9 strategic approaches per ISO 26262.
+    
+    Trigger phrases: "develop strategies", "create strategies", "generate strategies"
+    NOT for: viewing strategies, showing strategy details, or listing strategies
+    
+    Action: Generates safety strategies for each safety goal
+    Prerequisites: Safety goals must be loaded via load_hara
+    ISO Reference: ISO 26262-3:2018, Clause 7.4.2.3
+    Input: "all goals" or specific goal ID like "SG-001"
     """
     
-    log.info("✅ TOOL CALLED: develop_safety_strategy")
+    log.warning(f"----------------✅ TOOL CALLED: develop_safety_strategy with input: {tool_input} ----------------")
 
     # ========================================================================
     # Load plugin settings
@@ -49,11 +58,12 @@ def develop_safety_strategy(tool_input, cat):
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
     
     if not safety_goals_data:
-        return """❌ No safety goals loaded.
-
-**Required Steps per ISO 26262-3:2018:**
-1. Load HARA (7.3.1): `load HARA for [item name]`
-2. Develop strategy (7.4.2.3): `develop safety strategy for all goals`
+        # ✅ Return string directly, not dict
+        return """❌ No safety goals loaded. 
+        Safety Goals are a prerequisties to develop the safety strategies. **ISO 26262-3:2018 (7.3.1) **
+        You can:
+         1) (Iso Clause 7.3.1)   - Load the Safety Goals from an existing HARA by typing: `load HARA for [item name]`
+         2) (Iso Clause 7.4.2.3) - Develop the Safety strategy for each Safety Goal by typing: `develop safety strategy for all goals`
 """
     
     # Convert to SafetyGoal objects
@@ -76,6 +86,7 @@ def develop_safety_strategy(tool_input, cat):
         goals_to_process = [g for g in safety_goals if g.id == sg_id]
         
         if not goals_to_process:
+            # ✅ Return string directly
             return f"❌ Safety Goal '{sg_id}' not found."
     
     try:
@@ -85,10 +96,11 @@ def develop_safety_strategy(tool_input, cat):
             strategy_text_length=strategy_text_length)
         
         # Generate strategies
-        log.info("🔄 Generating safety strategies...")
+        log.warning("📄 Generating safety strategies...")
         strategies = generator.generate_strategies(goals_to_process, strategy_text_length, system_name)
         
         if not strategies:
+            # ✅ Return string directly
             return "❌ Failed to generate strategies. Please try again."
         
         # Validate strategies
@@ -107,57 +119,82 @@ def develop_safety_strategy(tool_input, cat):
         
         cat.working_memory.fsc_safety_strategies = list(existing_dict.values())
         cat.working_memory.fsc_stage = "strategies_developed"
+        cat.working_memory.last_operation = "strategy_development"
         
-        # Format output
-        formatter = StrategyFormatter()
-        output = formatter.format_strategy_summary(strategies, goals_to_process)
+        # ✅ FIXED: Return MINIMAL output - let hook format the table
+        output = f"""✅ Successfully developed safety strategies for {len(goals_to_process)} safety goal(s)
+            **System:** {system_name}
+            **Safety Goals Processed:** {len(goals_to_process)}
+            """
         
-        # Add validation summary
-        if validation_result.has_warnings():
-            output += "\n\n---\n\n"
-            output += f"⚠️ **Validation Warnings:**\n{validation_result.format_report()}\n"
+        # Add validation warnings only if critical
+        if validation_result.has_errors():
+            output += f"\n❌ Validation: {len(validation_result.errors)} errors found\n"
+            output += validation_result.format_report()
         
-        # # Add next steps
-        # workflow_section = """***ISO 26262-3:2018 - Functional Safety Concept Development Workflow***"""
-    
-        # completed__workflow_content ="""| Step | Phase | ISO 26262:3 clause | Status |
-        # |------|-------|------------------|--------------|
-        # | ✅ | Identify Safety Goals | 7.3.1 | Safety Goals extracted from HARA |
-        # | ✅ | Develop Safety Strategy | 7.4.2.3 | Safety Strategies developed |"""
-      
-        # # # Add workflow next steps
-        # pending_workflow_content = """| Step | Phase | ISO 26262:3 clause | Tool Command |
-        # |------|-------|------------------|--------------|
-        # | 3 | Derive Functional Safety Requirements | 7.4.2.2 | `derive FSRs for all goals` |
-        # | 4 | Allocate FSRs to system architecture | 7.4.2.8 | `allocate all FSRs` |
-        # | 5 | Specify Validation Criteria | 7.4.3 | `specify validation criteria` |
-        # | 6 | Verify FSC | 7.4.4 | `verify FSC` |
-        # | 7 | Generate FSC Document | 7.5 | `generate FSC document` |"""
-       
-        # log.info(f"✅ Strategies generated: {len(strategies)} safety goals")
-        # output += workflow_section + "\n " + completed__workflow_content + "\n **Next Steps** \n" + pending_workflow_content
+        log.info(f"✅ Strategies generated: {len(strategies)} safety goals")
+        
+        # The hook will add:
+        # - Strategy table
+        # - Statistics
+        # - Export options
+        # - Next steps
+        
         return output
+
+        # # Format output
+        # formatter = StrategyFormatter()
+        # output = formatter.format_strategy_summary(strategies, goals_to_process)
+        
+        # # Add validation summary if there are warnings
+        # if validation_result.has_warnings():
+        #     output += "\n\n---\n\n"
+        #     output += f"⚠️ **Validation Warnings:**\n{validation_result.format_report()}\n"
+        
+        # log.info(f"✅ Strategies generated: {len(strategies)} safety goals")
+        
+        # # ✅ Return string directly - output_formatter will add next steps
+        # return output
         
     except Exception as e:
         log.error(f"Error developing strategies: {e}")
         import traceback
         log.error(traceback.format_exc())
+        # ✅ Return string directly
         return f"❌ Error developing strategies: {str(e)}\n\nPlease try again or check the logs."
 
 
-@tool(return_direct=True)
+@tool(
+    return_direct=False,
+    examples=[
+        "show strategy for SG-001",
+        "display strategy for goal 1",
+        "what is the strategy for SG-002",
+        "show me strategy SG-003",
+        "explain strategy for SG-001"
+    ]
+)
 def show_strategy_for_goal(tool_input, cat):
-    """
-    Show detailed strategy for a specific safety goal.
+    """DETAIL TOOL: Shows complete strategy for ONE SPECIFIC safety goal by ID.
     
-    Input: Safety goal ID (e.g., "SG-001")
-    Example: "show strategy for SG-001"
+    Use when user requests strategy details for A SINGLE SPECIFIC SAFETY GOAL.
+    Shows all 10 strategic approaches for that goal.
+    
+    Trigger phrases: "show strategy for SG-XXX", "strategy details for goal X"
+    NOT for: creating strategies, listing all strategies, or strategy summary
+    
+    Displays: Complete strategy with all 10 approaches for one safety goal
+    Prerequisites: Strategies must be developed first
+    Input: REQUIRED - Safety goal ID like "SG-001"
     """
+    
+    log.warning(f"----------------✅ TOOL CALLED: show_strategy_for_goal with input: {tool_input} ----------------")
     
     strategies_data = cat.working_memory.get("fsc_safety_strategies", [])
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
     
     if not strategies_data:
+        # ✅ Return string directly
         return "❌ No strategies developed yet. Use: `develop safety strategy for all goals`"
     
     # Parse input
@@ -171,6 +208,7 @@ def show_strategy_for_goal(tool_input, cat):
     
     if not strategy_data:
         available = ', '.join([s['safety_goal_id'] for s in strategies_data[:5]])
+        # ✅ Return string directly
         return f"""❌ Strategy for '{sg_id}' not found.
 
 **Available:** {available}{'...' if len(strategies_data) > 5 else ''}
@@ -182,6 +220,7 @@ def show_strategy_for_goal(tool_input, cat):
     goal_data = next((g for g in safety_goals_data if g['id'] == sg_id), None)
     
     if not goal_data:
+        # ✅ Return string directly
         return f"❌ Safety goal {sg_id} not found."
     
     # Convert to objects
@@ -192,24 +231,46 @@ def show_strategy_for_goal(tool_input, cat):
     formatter = StrategyFormatter()
     output = formatter.format_strategy_for_goal(strategy, goal)
     
+    log.info(f"📋 Showed strategy for {sg_id}")
+    
+    # ✅ Return string directly
     return output
 
 
-@tool(return_direct=True)
+@tool(
+    return_direct=False,
+    examples=[
+        "show strategy summary",
+        "list strategies",
+        "show all strategies overview",
+        "strategy statistics"
+    ]
+)
 def show_strategy_summary(tool_input, cat):
-    """
-    Show summary of all developed strategies.
+    """OVERVIEW TOOL: Shows summary of ALL strategies across all safety goals.
     
-    Input: "show strategy summary" or "list strategies"
+    Use when user wants an OVERVIEW/SUMMARY of ALL STRATEGIES.
+    Shows high-level statistics and completeness status.
+    
+    Trigger phrases: "show strategy summary", "list all strategies", "strategy overview"
+    NOT for: creating strategies, single strategy details, or specific goal strategy
+    
+    Displays: Total strategies, status per goal, completeness indicators
+    Prerequisites: Strategies must be developed first
+    Input: Not required (use empty string)
     """
+    
+    log.warning(f"----------------✅ TOOL CALLED: show_strategy_summary with input: {tool_input} ----------------")
     
     strategies_data = cat.working_memory.get("fsc_safety_strategies", [])
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
     system_name = cat.working_memory.get("system_name", "Unknown System")
     
     if not strategies_data:
+        # ✅ Return string directly
         return "❌ No strategies developed yet. Use: `develop safety strategy for all goals`"
     
+    # ✅ Return string directly with formatted summary
     summary = f"""# 📋 Safety Strategy Summary
 
 **System:** {system_name}
@@ -242,8 +303,8 @@ def show_strategy_summary(tool_input, cat):
     summary += """---
 
 **View Detailed Strategy:** `show strategy for SG-XXX`
-
-**Next Step:** `derive FSRs for all goals`
 """
+    
+    log.info(f"📊 Showed strategy summary: {len(strategies_data)} strategies")
     
     return summary

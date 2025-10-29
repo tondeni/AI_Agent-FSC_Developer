@@ -17,32 +17,35 @@ from core.validators import FSCValidator
 
 
 @tool(
-    return_direct=True,
+    return_direct=False,
     examples=[
         "specify validation criteria",
         "generate validation criteria",
-        "define acceptance criteria"
+        "define acceptance criteria",
+        "create validation criteria for FSC"
     ]
 )
 def specify_safety_validation_criteria(tool_input, cat):
+    """CRITERIA SPECIFICATION TOOL: Specifies acceptance criteria for safety validation.
+    
+    Use ONLY when user wants to CREATE/DEFINE/SPECIFY NEW VALIDATION CRITERIA.
+    Generates acceptance criteria based on FSRs and safety goals.
+    
+    Trigger phrases: "specify validation criteria", "define acceptance criteria"
+    NOT for: performing verification, showing criteria, or verification reports
+    
+    Action: Generates validation criteria for each FSR and safety goal
+    Prerequisites: Safety goals loaded, FSRs derived
+    ISO Reference: ISO 26262-3:2018, Clause 7.4.3.1
+    Input: Not required
     """
-    Specify acceptance criteria for safety validation of the item.
-    
-    Per ISO 26262-3:2018, 7.4.3.1:
-    The acceptance criteria for safety validation shall be specified
-    based on the functional safety requirements and the safety goals.
-    
-    NOTE: Supports safety validation per ISO 26262-4:2018, Clause 8.
-    
-    Input: "specify validation criteria"
-    """
-    
-    log.info("✅ TOOL CALLED: specify_safety_validation_criteria")
+    log.warning(f"----------------✅ TOOL CALLED: show_mechanspecify_safety_validation_criteria with input {tool_input} ----------------")
     
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
     fsrs_data = cat.working_memory.get("fsc_functional_requirements", [])
     
     if not safety_goals_data:
+        # ✅ Return string directly
         return """❌ No safety goals loaded.
 
 **Required per ISO 26262-3:2018, 7.4.3.1:**
@@ -57,6 +60,7 @@ Acceptance criteria for safety validation shall be specified based on:
 """
     
     if not fsrs_data:
+        # ✅ Return string directly
         return """❌ No FSRs derived yet.
 
 **Required:**
@@ -76,20 +80,23 @@ Acceptance criteria for safety validation shall be specified based on:
         generator = ValidationGenerator(cat.llm)
         
         # Generate validation criteria
-        log.info("🔄 Generating validation criteria...")
+        log.info("📄 Generating validation criteria...")
         criteria = generator.generate_validation_criteria(safety_goals, fsrs, system_name)
         
         if not criteria:
+            # ✅ Return string directly
             return "❌ Failed to generate validation criteria. Please try again."
         
         # Store in working memory
         cat.working_memory["fsc_validation_criteria"] = [c.to_dict() for c in criteria]
-        cat.working_memory["fsc_stage"] = "validation_criteria_specified"
+        cat.working_memory.fsc_stage = "validation_criteria_specified"
+        cat.working_memory.last_operation = "validation_criteria_specification"
         
         # Format output
         formatter = ValidationFormatter()
         stats = formatter.get_validation_statistics(criteria)
         
+        # ✅ Return string directly with formatted summary
         summary = f"""✅ **Safety Validation Criteria Specified**
 *ISO 26262-3:2018, Clause 7.4.3 compliance*
 
@@ -131,25 +138,6 @@ Acceptance criteria for safety validation shall be specified based on:
 **ISO 26262-3:2018, 7.4.3.1 Compliance:**
 ✅ Acceptance criteria specified based on FSRs and safety goals
 ✅ Criteria support safety validation per ISO 26262-4:2018, Clause 8
-
-**Completed:**
-- ✅ Step 1: Safety Goals extracted from HARA
-- ✅ Step 2: Safety Strategies developed
-- ✅ Step 3: Functional Safety Requirements derived
-- ✅ Step 4: FSRs allocated to architecture
-- ✅ Step 5: Validation criteria specified
-
-**Next Steps:**
-
-➡️ **Step 6:** Verify FSC (7.4.4)
-   ```
-   verify FSC
-   ```
-
-➡️ **Step 7:** Generate FSC Document (7.5)
-   ```
-   generate FSC document
-   ```
 """
         
         log.info(f"✅ Validation criteria generated: {len(criteria)} criteria")
@@ -160,34 +148,35 @@ Acceptance criteria for safety validation shall be specified based on:
         log.error(f"Error specifying validation criteria: {e}")
         import traceback
         log.error(traceback.format_exc())
-        return f"❌ Error specifying validation criteria: {str(e)}"
+        # ✅ Return string directly
+        return f"❌ Error specifying validation criteria: {str(e)}\n\nPlease check the logs for details."
 
 
 @tool(
-    return_direct=True,
+    return_direct=False,
     examples=[
         "verify FSC",
         "verify functional safety concept",
-        "check FSC compliance"
+        "check FSC compliance",
+        "perform FSC verification"
     ]
 )
 def verify_functional_safety_concept(tool_input, cat):
+    """VERIFICATION ACTION TOOL: Performs complete FSC verification process.
+    
+    Use ONLY when user wants to PERFORM THE VERIFICATION of the FSC.
+    Executes verification checks per ISO 26262-3:2018, 7.4.4 and generates report.
+    
+    Trigger phrases: "verify FSC", "check FSC compliance", "perform verification"
+    NOT for: specifying criteria, showing criteria, or displaying reports
+    
+    Action: Verifies consistency, completeness, traceability, generates report
+    Prerequisites: Goals loaded, FSRs derived and allocated
+    ISO Reference: ISO 26262-3:2018, Clause 7.4.4.1 and ISO 26262-8:2018, Clause 9
+    Input: Not required
     """
-    Verify the Functional Safety Concept.
     
-    Per ISO 26262-3:2018, 7.4.4.1:
-    The FSC shall be verified per ISO 26262-8:2018, Clause 9, to provide evidence for:
-    
-    a) its consistency and compliance with the safety goals; and
-    b) its ability to mitigate or avoid the hazards.
-    
-    NOTE: Traceability based argument can be used: the item complies with 
-    safety goals if item complies with FSRs.
-    
-    Input: "verify FSC"
-    """
-    
-    log.info("✅ TOOL CALLED: verify_functional_safety_concept")
+    log.warning(f"----------------✅ TOOL CALLED: verify_functional_safety_concept with input {tool_input} ----------------")
     
     safety_goals_data = cat.working_memory.get("fsc_safety_goals", [])
     strategies_data = cat.working_memory.get("fsc_safety_strategies", [])
@@ -195,12 +184,13 @@ def verify_functional_safety_concept(tool_input, cat):
     validation_criteria_data = cat.working_memory.get("fsc_validation_criteria", [])
     
     if not safety_goals_data or not fsrs_data:
+        # ✅ Return string directly
         return """❌ Cannot verify FSC: Incomplete FSC development.
 
 **Required per ISO 26262-3:2018, 7.4.4:**
 1. Safety goals loaded
 2. FSRs derived
-3. FSRs allocated
+3. FSRs allocated (recommended)
 
 **Steps:**
 1. Load HARA: `load HARA for [item]`
@@ -417,9 +407,10 @@ compliance with safety goals.
         
         # Store verification report
         cat.working_memory["fsc_verification_report"] = report
-        cat.working_memory["fsc_stage"] = "fsc_verified"
+        cat.working_memory.fsc_stage = "fsc_verified"
+        cat.working_memory.last_operation = "fsc_verification"
         
-        # Build summary for user
+        # Build summary for user - ✅ Return string directly
         summary = f"""✅ **FSC Verification Complete**
 *ISO 26262-3:2018, Clause 7.4.4 and ISO 26262-8:2018, Clause 9*
 
@@ -435,24 +426,6 @@ compliance with safety goals.
 ---
 
 {report}
-
----
-
-**Completed:**
-- ✅ Step 1: Safety Goals extracted from HARA
-- ✅ Step 2: Safety Strategies developed
-- ✅ Step 3: Functional Safety Requirements derived
-- ✅ Step 4: FSRs allocated to architecture
-- ✅ Step 5: Validation criteria specified
-- ✅ Step 6: FSC verified
-
-**Next Step:**
-
-➡️ **Step 7:** Generate FSC Work Products (7.5)
-   ```
-   generate FSC document
-   ```
-   - Will include this verification report per 7.5.2
 """
         
         log.info(f"✅ FSC verification complete: {'PASSED' if validation_result.passed else 'FAILED'}")
@@ -463,4 +436,122 @@ compliance with safety goals.
         log.error(f"Error verifying FSC: {e}")
         import traceback
         log.error(traceback.format_exc())
-        return f"❌ Error verifying FSC: {str(e)}"
+        # ✅ Return string directly
+        return f"❌ Error verifying FSC: {str(e)}\n\nPlease check the logs for details."
+
+
+@tool(
+    return_direct=False,
+    examples=[
+        "show validation criteria",
+        "list validation criteria",
+        "display acceptance criteria",
+        "validation criteria overview"
+    ]
+)
+def show_validation_criteria_summary(tool_input, cat):
+    """DISPLAY TOOL: Shows summary of ALL validation criteria.
+    
+    Use when user wants to VIEW/SEE existing validation criteria summary.
+    Shows statistics and distribution of criteria.
+    
+    Trigger phrases: "show validation criteria", "list criteria", "criteria overview"
+    NOT for: creating criteria, performing verification, or verification reports
+    
+    Displays: Total criteria, distribution by method, coverage by goal/FSR
+    Prerequisites: Validation criteria must be specified first
+    Input: Not required
+    """
+    
+    log.warning(f"----------------✅ TOOL CALLED: show_validation_criteria_summary with input {tool_input} ----------------")
+    
+    validation_criteria_data = cat.working_memory.get("fsc_validation_criteria", [])
+    system_name = cat.working_memory.get("system_name", "Unknown System")
+    
+    if not validation_criteria_data:
+        # ✅ Return string directly
+        return "❌ No validation criteria specified yet. Use: `specify validation criteria`"
+    
+    # Calculate statistics
+    total = len(validation_criteria_data)
+    by_method = {}
+    by_goal = {}
+    goal_level = 0
+    fsr_level = 0
+    
+    for criteria in validation_criteria_data:
+        # Count by method
+        method = criteria.get('method', 'Unknown')
+        by_method[method] = by_method.get(method, 0) + 1
+        
+        # Count by goal
+        sg_id = criteria.get('safety_goal_id', 'Unknown')
+        by_goal[sg_id] = by_goal.get(sg_id, 0) + 1
+        
+        # Count level
+        if criteria.get('fsr_id'):
+            fsr_level += 1
+        else:
+            goal_level += 1
+    
+    # ✅ Return string directly with formatted summary
+    output = f"""📊 **Validation Criteria Summary for {system_name}**
+
+**Total Criteria:** {total}
+
+**Criteria Coverage:**
+- Goal-Level Criteria: {goal_level}
+- FSR-Level Criteria: {fsr_level}
+
+**Distribution by Validation Method:**
+"""
+    
+    for method, count in sorted(by_method.items(), key=lambda x: x[1], reverse=True):
+        output += f"- {method}: {count} criteria\n"
+    
+    output += f"\n**Distribution by Safety Goal:**\n"
+    for sg_id, count in sorted(by_goal.items()):
+        output += f"- {sg_id}: {count} criteria\n"
+    
+    output += "\n\n**Commands:**"
+    output += "\n- Verify FSC: `verify FSC`"
+    output += "\n- Generate document: `generate FSC document`"
+    
+    log.info(f"📊 Showed validation criteria summary: {total} criteria")
+    
+    return output
+
+
+@tool(
+    return_direct=False,
+    examples=[
+        "show verification report",
+        "display FSC verification report",
+        "show verification results"
+    ]
+)
+def show_verification_report(tool_input, cat):
+    """REPORT DISPLAY TOOL: Displays the FSC verification report.
+    
+    Use when user wants to VIEW the previously generated verification report.
+    
+    Trigger phrases: "show verification report", "display verification results"
+    NOT for: performing verification, creating criteria, or criteria summary
+    
+    Displays: Complete verification report with pass/fail status
+    Prerequisites: FSC must be verified first using verify_functional_safety_concept
+    Input: Not required
+    """
+    
+    log.warning(f"----------------✅ TOOL CALLED: show_verification_report with input {tool_input} ----------------")
+    
+    verification_report = cat.working_memory.get("fsc_verification_report")
+    
+    if not verification_report:
+        # ✅ Return string directly
+        return "❌ No verification report available. Please verify FSC first: `verify FSC`"
+    
+    log.info("📋 Displayed verification report")
+    
+    # ✅ Return string directly
+    return verification_report

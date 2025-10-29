@@ -290,19 +290,17 @@ def _build_hara_summary(hara_data, validation_result):
         asil = goal.asil
         asil_counts[asil] = asil_counts.get(asil, 0) + 1
     
-    summary = f"""✅ **HARA Loaded Successfully**
-*ISO 26262-3:2018, 7.3.1: Prerequisites satisfied*
+    summary = f"""✅ **HARA Loaded Successfully -> Safety Goals identified: (ISO 26262-3:2018, 7.3.1)**
 
-**System:** {hara_data.system}
-**Source:** {hara_data.source}
-**Safety Goals Extracted:** {len(hara_data.goals)}
+Source: {hara_data.source}
+Safety Goals Extracted: **{len(hara_data.goals)}**
 
-**ASIL Distribution:**
+ASIL Distribution:
 """
     
     for asil in ['D', 'C', 'B', 'A', 'QM']:
         if asil in asil_counts:
-            summary += f"- ASIL {asil}: {asil_counts[asil]} goal{'s' if asil_counts[asil] != 1 else ''}\n"
+            summary += f"- **ASIL {asil}**: ({asil_counts[asil]} Safety Goal {'s' if asil_counts[asil] != 1 else ''}) "
     
     # Add validation summary if there are warnings
     if validation_result.has_warnings():
@@ -314,32 +312,12 @@ def _build_hara_summary(hara_data, validation_result):
     
     # Create markdown table
     summary += _build_safety_goals_table(hara_data.goals)
-    
-    summary += "\n---\n\n"
-    
-    # workflow_section = """***ISO 26262-3:2018 - Functional Safety Concept Development Workflow***"""
-    
-    # completed__workflow_content ="""| Step | Phase | ISO 26262:3 clause | Status |
-    # |------|-------|------------------|--------------|
-    # | ✅   | Identify Safety Goals | 7.3.1 | Safety Goals extracted from HARA |"""
-      
-    # # Add workflow next steps
-    # pending_workflow_content = """| Step | Phase | ISO 26262:3 clause | Tool Command |
-    # |------|-------|------------------|--------------|
-    # | 2 | Develop Safety Strategy | 7.4.2.3 | `develop safety strategy for all goals` |
-    # | 3 | Derive Functional Safety Requirements | 7.4.2.2 | `derive FSRs for all goals` |
-    # | 4 | Allocate FSRs to system architecture | 7.4.2.8 | `allocate all FSRs` |
-    # | 5 | Specify Validation Criteria | 7.4.3 | `specify validation criteria` |
-    # | 6 | Verify FSC | 7.4.4 | `verify FSC` |
-    # | 7 | Generate FSC Document | 7.5 | `generate FSC document` |"""
-
-    # summary += workflow_section + "\n " + completed__workflow_content + "\n **Next Steps** \n" + pending_workflow_content
-
-    
+    summary += "\n---\n\n" 
     return summary
 
 
 def _build_safety_goals_table(goals):
+    
     """Build markdown table for safety goals"""
     
     # Build table header
